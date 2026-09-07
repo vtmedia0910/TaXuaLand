@@ -1,1 +1,18 @@
-{"extends":"../../tsconfig.base.json","compilerOptions":{"plugins":[{"name":"next"}],"incremental":true},"include":["next-env.d.ts","**/*.ts","**/*.tsx",".next/types/**/*.ts"],"exclude":["node_modules"]}
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "incremental": true,
+    "paths": {
+      "@land/api/*": ["../../services/api/src/*"],
+      "@land/contracts": ["../../packages/contracts/src/index"],
+      "@land/ui/*": ["../../packages/ui/src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

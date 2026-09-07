@@ -1,3 +1,99 @@
-:root { color-scheme: dark; font-family: Arial, sans-serif; background: #0c1523; color: #eff6ff; }
-body { margin: 0; } main { padding: 2rem; } p { font-size: 1rem; line-height: 1.6; }
-button, input, select, textarea { font: inherit; } a { color: #80dbff; }
+:root {
+  color-scheme: dark;
+  font-family: Arial, sans-serif;
+  background: #0c1523;
+  color: #eff6ff;
+}
+body {
+  margin: 0;
+}
+main {
+  padding: 2rem;
+}
+p {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+a {
+  color: #80dbff;
+}
+.login {
+  max-width: 28rem;
+  margin: 6vh auto;
+  padding: 2rem;
+}
+form {
+  display: grid;
+  gap: 1rem;
+}
+label {
+  display: grid;
+  gap: 0.45rem;
+  font-size: 1rem;
+}
+input,
+select,
+textarea {
+  color: #eff6ff;
+  background: #162438;
+  border: 1px solid #4b6079;
+  padding: 0.8rem;
+  border-radius: 0.4rem;
+  min-width: 0;
+}
+button {
+  border: 1px solid #83dcfa;
+  background: #83dcfa;
+  color: #0c1523;
+  padding: 0.75rem 1rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+:focus-visible {
+  outline: 3px solid #f5c56a;
+  outline-offset: 3px;
+}
+[role="alert"] {
+  color: #ffb8b8;
+}
+.admin-shell {
+  display: grid;
+  grid-template-columns: 16rem 1fr;
+  min-height: 100vh;
+}
+.admin-shell aside {
+  padding: 2rem;
+  border-right: 1px solid #344254;
+  background: #101d2f;
+}
+.admin-shell nav {
+  display: grid;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+@media (max-width: 760px) {
+  .admin-shell {
+    grid-template-columns: 1fr;
+  }
+  .admin-shell aside {
+    padding: 1rem;
+    border-bottom: 1px solid #344254;
+  }
+  .admin-shell nav {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  main {
+    padding: 1rem;
+  }
+}

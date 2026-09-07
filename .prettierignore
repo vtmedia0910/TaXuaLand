@@ -1,0 +1,10 @@
+pnpm-lock.yaml
+docs/PHASE_0_SPATIAL_FOUNDATION.md
+work/
+node_modules/
+.next/
+**/.gitkeep
+apps/web/public/cesium/
+apps/web/public/spatial/
+playwright-report/
+test-results/

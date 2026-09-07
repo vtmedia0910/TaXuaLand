@@ -1,1 +1,10 @@
-{"name":"@land/api","version":"0.0.0","private":true,"type":"module","dependencies":{"pg":"^8.16.0","zod":"^4.1.0"}}
+{
+  "name": "@land/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "pg": "^8.16.0",
+    "zod": "^4.1.0"
+  }
+}

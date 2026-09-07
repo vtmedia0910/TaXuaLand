@@ -1,1 +1,16 @@
-{"name":"@land/web","version":"0.0.0","private":true,"scripts":{"dev":"next dev","build":"next build --webpack","start":"next start","typecheck":"tsc --noEmit"},"dependencies":{"next":"16.3.4","react":"^19.2.0","react-dom":"^19.2.0"}}
+{
+  "name": "@land/web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build --webpack",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.3.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  }
+}
