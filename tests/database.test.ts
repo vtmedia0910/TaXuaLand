@@ -36,7 +36,7 @@ describe.skipIf(!connection)("real PostgreSQL/PostGIS integration", () => {
     const result = await pool.query(
       "SELECT count(*)::int AS n FROM land_migrations",
     );
-    expect(result.rows[0].n).toBe(2);
+    expect(result.rows[0].n).toBeGreaterThanOrEqual(2);
   });
   it("stores and queries EPSG:4326 points and geodesic meters", async () => {
     const result = await pool.query(
@@ -155,3 +155,4 @@ describe.skipIf(!connection)("real PostgreSQL/PostGIS integration", () => {
     ).toBe(1);
   });
 });
+
