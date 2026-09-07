@@ -6,11 +6,18 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "predev": "node ../../infra/copy-cesium.mjs",
+    "prebuild": "node ../../infra/copy-cesium.mjs"
   },
   "dependencies": {
+    "@tailwindcss/postcss": "4.1.0",
+    "@tanstack/react-query": "5.102.8",
+    "cesium": "1.145.0",
     "next": "16.3.4",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "tailwindcss": "4.1.0",
+    "zod": "4.1.0"
   }
 }

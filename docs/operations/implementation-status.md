@@ -11,7 +11,7 @@ Milestones (in order):
 4. Admin authentication/authorization — PASS: 30 tests including real session/role/expiry integration, lint/typecheck/build; HTTP 401/200/403 checks; Playwright login/logout passed and desktop/mobile screenshots inspected. Runtime uses separate land_app role.
 5. Place application services/CRUD — PASS: 32 tests, lint/typecheck/build, real HTTP create/read/archive; geometry confirmation and history, optimistic concurrency, source records, categories/media/references, immutable content snapshots, accent-insensitive search.
 6. Source/dataset registries — PASS: 34 tests, lint/typecheck/build, authenticated Playwright navigation through source/dataset/diagnostics pages and screenshots inspected. Strict permissions metadata and safe provider DTOs; no production datasets asserted.
-7. Cesium shell — pending.
+7. Cesium shell — PASS: 34 tests, lint/typecheck/build and 2 Playwright viewer tests. Desktop/mobile rendering, layer toggle, camera reset without reload and WebGL fallback inspected. Lazy client chunk, local Cesium workers, request-render mode and cleanup implemented. Neutral grid explicitly labeled; real terrain/roads proof remains milestone 13.
 8. Public place layer — pending.
 9. Admin spatial editor — pending.
 10. Excel parser/staging — pending.
