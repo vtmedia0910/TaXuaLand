@@ -6,7 +6,7 @@ The complete 2,497-line supplied specification was read before source edits.
 Milestones (in order):
 
 1. Repository foundation — PASS: install, lint, typecheck, unit test and production build; HTTP 200 and real browser screenshot inspected on 2026-09-07.
-2. Domain contracts and ADRs — pending.
+2. Domain contracts and ADRs — PASS: 21 unit tests, lint, typecheck, production build; parser and trust transitions exercised directly. ADRs 001–008 recorded.
 3. Database + PostGIS — pending; local runtime prerequisite under investigation.
 4. Admin authentication/authorization — pending.
 5. Place application services/CRUD — pending.
@@ -24,4 +24,3 @@ Milestones (in order):
 17. Operations/release candidate — pending.
 
 No completion claim is made for untested or externally unverified criteria. Source licensing, factual verification and terrain control-point review require documented evidence before production approval.
-
