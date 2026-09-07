@@ -97,3 +97,6 @@ button:disabled {
     padding: 1rem;
   }
 }
+.card { background:#142235; border:1px solid #34475c; border-radius:.6rem; padding:1.25rem; margin:1rem 0; }
+.table-scroll { overflow-x:auto; } table { width:100%; border-collapse:collapse; font-size:.95rem; } th,td { padding:1rem; border-bottom:1px solid #34475c; text-align:left; vertical-align:top; line-height:1.6; } th { color:#a7bacd; } .hash { font-family:monospace; max-width:18rem; overflow-wrap:anywhere; }
+.badge { display:inline-block; padding:.15rem .5rem; border-radius:.3rem; margin:.2rem 0; font-size:.8rem; border:1px solid #65748b; background:#233247; }.badge.positive { color:#adf1c8; border-color:#5bba80; }.badge.negative { color:#ffc0bd; border-color:#cb736a; }

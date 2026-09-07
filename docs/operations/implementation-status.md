@@ -10,7 +10,7 @@ Milestones (in order):
 3. Database + PostGIS — PASS: real PostgreSQL 17.11/PostGIS 3.6.2; fresh disposable database migrations and repeat migration; spatial/geodesic query, GiST indexes, immutable geometry history. All 25 tests, lint, typecheck and build pass. GitHub CI for milestones 1–2 also passed.
 4. Admin authentication/authorization — PASS: 30 tests including real session/role/expiry integration, lint/typecheck/build; HTTP 401/200/403 checks; Playwright login/logout passed and desktop/mobile screenshots inspected. Runtime uses separate land_app role.
 5. Place application services/CRUD — PASS: 32 tests, lint/typecheck/build, real HTTP create/read/archive; geometry confirmation and history, optimistic concurrency, source records, categories/media/references, immutable content snapshots, accent-insensitive search.
-6. Source/dataset registries — pending.
+6. Source/dataset registries — PASS: 34 tests, lint/typecheck/build, authenticated Playwright navigation through source/dataset/diagnostics pages and screenshots inspected. Strict permissions metadata and safe provider DTOs; no production datasets asserted.
 7. Cesium shell — pending.
 8. Public place layer — pending.
 9. Admin spatial editor — pending.

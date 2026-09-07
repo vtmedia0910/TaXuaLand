@@ -19,6 +19,22 @@ test("admin login, protected page and logout", async ({ page }) => {
     path: "work/qa-admin-auth-desktop.png",
     fullPage: true,
   });
+  await page.getByRole("link", { name: "Nguồn dữ liệu", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Nguồn dữ liệu", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({ path: "work/qa-sources.png", fullPage: true });
+  await page
+    .getByRole("link", { name: "Dataset & release", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Dataset & release", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Chẩn đoán", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Chẩn đoán hệ thống" }),
+  ).toBeVisible();
+  await page.screenshot({ path: "work/qa-diagnostics.png", fullPage: true });
   await page.getByRole("button", { name: "Đăng xuất" }).click();
   await expect(page).toHaveURL(/\/admin\/login$/);
   await page.setViewportSize({ width: 390, height: 844 });
