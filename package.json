@@ -1,0 +1,31 @@
+{
+  "name": "taxua-land",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @land/web dev",
+    "build": "pnpm --filter @land/web build",
+    "typecheck": "tsc --noEmit && pnpm --filter @land/web typecheck",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.39.0",
+    "eslint-config-next": "16.3.4",
+    "prettier": "^3.6.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^4.0.0"
+  },
+  "type": "module"
+}
