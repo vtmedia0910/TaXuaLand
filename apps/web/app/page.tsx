@@ -1,9 +1,11 @@
+import Link from 'next/link';
 export default function Home() {
   return (
     <main>
       <p>TÀ XÙA LAND</p>
       <h1>Nền tảng không gian</h1>
-      <p>Phase 0 đang được xây dựng. Chưa có dữ liệu địa điểm được công bố.</p>
+      <p>Khám phá địa điểm qua vị trí, nguồn dữ liệu và trạng thái xác minh.</p>
+      <Link href="/map">Mở bản đồ Tà Xùa</Link>
     </main>
   );
 }

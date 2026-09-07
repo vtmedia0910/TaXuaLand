@@ -1,9 +1,18 @@
 import Link from "next/link";
-import { SpatialViewer } from "../../components/spatial-viewer";
+import { PublicExplorer } from "../../components/public-explorer";
 import { publicLayers } from "@land/api/layers";
+import { publicCategories } from "@land/api/public-places";
 export const dynamic = "force-dynamic";
-export default async function MapPage() {
-  const config = await publicLayers();
+export default async function MapPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ place?: string }>;
+}) {
+  const [config, categories, params] = await Promise.all([
+    publicLayers(),
+    publicCategories(),
+    searchParams,
+  ]);
   return (
     <>
       <header className="public-header">
@@ -19,7 +28,11 @@ export default async function MapPage() {
           <h1>Khám phá từ bản đồ</h1>
           <p>Vị trí, nguồn dữ liệu và trạng thái xác minh.</p>
         </div>
-        <SpatialViewer config={config} />
+        <PublicExplorer
+          config={config}
+          categories={categories}
+          initialSlug={params.place ?? null}
+        />
       </main>
     </>
   );

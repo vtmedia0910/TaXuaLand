@@ -28,6 +28,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
   const [ready, setReady] = useState(false),
     [generation, setGeneration] = useState(0),
     [settled, setSettled] = useState(false),
+    [focusedId, setFocusedId] = useState<string | null>(null),
     [failed, setFailed] = useState(false),
     [notice, setNotice] = useState(""),
     [visible, setVisible] = useState<Record<LayerId, boolean>>({
@@ -335,15 +336,26 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     if (!ready || !v || v.isDestroyed()) return;
     const p = props.points?.find((p) => p.id === props.selectedId);
     if (p)
-      v.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(
-          p.location.longitude,
-          p.location.latitude,
-          3500,
+      v.camera.flyToBoundingSphere(
+        new Cesium.BoundingSphere(
+          Cesium.Cartesian3.fromDegrees(
+            p.location.longitude,
+            p.location.latitude,
+          ),
         ),
-        orientation: { heading: 0, pitch: Cesium.Math.toRadians(-70), roll: 0 },
-        duration: 1,
-      });
+        {
+          offset: new Cesium.HeadingPitchRange(
+            0,
+            Cesium.Math.toRadians(-70),
+            3500,
+          ),
+          duration: 1,
+          complete: () => {
+            setFocusedId(p.id);
+            v.scene.requestRender();
+          },
+        },
+      );
   }, [ready, generation, props.selectedId, props.points]);
   useEffect(() => {
     const v = viewer.current;
@@ -386,6 +398,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       data-testid="spatial-viewer"
       data-ready={ready && !failed ? "true" : "false"}
       data-settled={settled ? "true" : "false"}
+      data-focused-id={focusedId ?? ""}
     >
       <div
         ref={host}

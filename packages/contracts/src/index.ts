@@ -50,6 +50,7 @@ export const PublicPlaceDTO = z
       locationRole: LocationRole,
       verificationStatus: VerificationStatus,
       horizontalAccuracyMeters: z.number().nonnegative().nullable(),
+      trust: PublicTrust,
     }).strip(),
     mediaSummary: z.array(PublicMedia).max(1),
     trust: PublicTrust,
@@ -92,4 +93,8 @@ export const PublicListQuery = z.object({
   category: z.string().max(80).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).max(10000).default(0),
+});
+export const PublicPlaceList = z.object({
+  items: z.array(PublicPlaceDTO),
+  nextOffset: z.number().int().nonnegative().nullable(),
 });
