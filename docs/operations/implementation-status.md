@@ -13,7 +13,7 @@ Milestones (in order):
 6. Source/dataset registries — PASS: 34 tests, lint/typecheck/build, authenticated Playwright navigation through source/dataset/diagnostics pages and screenshots inspected. Strict permissions metadata and safe provider DTOs; no production datasets asserted.
 7. Cesium shell — PASS: 34 tests, lint/typecheck/build and 2 Playwright viewer tests. Desktop/mobile rendering, layer toggle, camera reset without reload and WebGL fallback inspected. Lazy client chunk, local Cesium workers, request-render mode and cleanup implemented. Neutral grid explicitly labeled; real terrain/roads proof remains milestone 13.
 8. Public place layer — PASS: 35 tests, lint/typecheck/build; real PostGIS public DTO boundaries exclude drafts, disabled/unknown-rights sources and denied media; Vietnamese search and category filters. Playwright search/select/fly-to/share with authored synthetic fixture and desktop/mobile screenshots inspected; viewer regressions pass. Fixture archived after QA; UNKNOWN retained independently for location and content.
-9. Admin spatial editor — pending.
+9. Admin spatial editor — PASS: 36 tests, lint/typecheck/build; real browser create, drag candidate, explicit correction, geometry history, review and publish UNKNOWN; desktop picker/mobile publication screenshots inspected. Permission/evidence/version gates and atomic bulk rollback tested in disposable PostGIS. Live candidate validation, operational AOI, metric road-context boundary, category creation and list filters included. Authentication/public-view regressions pass. GitHub CI milestones 6–8 passed.
 10. Excel parser/staging — pending.
 11. Import review/map preview — pending.
 12. Import commit — pending.

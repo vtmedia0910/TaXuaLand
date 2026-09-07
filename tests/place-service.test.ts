@@ -11,6 +11,11 @@ import {
 import { PlaceInput } from "../services/api/src/place-input";
 import type { Actor } from "../services/api/src/auth";
 import { publicPlace, publicPlaces } from "../services/api/src/public-places";
+import {
+  publishPlace,
+  verifyPlace,
+  bulkPlaces,
+} from "../services/api/src/place-workflow";
 const connection = process.env.DATABASE_TEST_URL;
 describe.skipIf(!connection)("place application service with PostGIS", () => {
   let owner: InstanceType<typeof pg.Client>,
@@ -121,12 +126,139 @@ describe.skipIf(!connection)("place application service with PostGIS", () => {
       ),
     ).toBe(true);
   });
+  it("enforces explicit publication and evidence while preserving corrected verified geometry", async () => {
+    await pool.query(
+      "UPDATE sources SET status='ACTIVE',public_display='ALLOWED' WHERE id=$1",
+      [sourceId],
+    );
+    const publisher = {
+      ...actor,
+      permissions: new Set(["read", "edit", "verify", "publish"]),
+    };
+    const data = PlaceInput.parse({
+      name: "Workflow fixture",
+      slug: "workflow-fixture",
+      sourceId,
+      categoryIds: [categoryId],
+      location: { longitude: 104.53, latitude: 21.26 },
+    });
+    const id = await savePlace(actor, data, null, pool);
+    const publication = {
+      version: 1,
+      reviewed: true,
+      warningsAcknowledged: false,
+      acknowledgedLocationStatus: "UNKNOWN",
+    };
+    await expect(publishPlace(actor, id, publication, pool)).rejects.toThrow(
+      "quyền",
+    );
+    await expect(
+      publishPlace(publisher, id, publication, pool),
+    ).rejects.toThrow("AOI");
+    await pool.query(
+      "INSERT INTO areas_of_interest(name,version,source,boundary,outside_policy,active) VALUES('Synthetic','test','Fixture',ST_MakeEnvelope(104,21,105,22,4326),'INVALID',true)",
+    );
+    await publishPlace(publisher, id, publication, pool);
+    expect(
+      (await publicPlace(data.slug, pool)).location.verificationStatus,
+    ).toBe("UNKNOWN");
+    const command = {
+      version: 2,
+      subject: "LOCATION",
+      status: "VERIFIED",
+      method: "Synthetic test comparison",
+      evidenceSourceRecordId: null,
+      freshnessPolicy: "NO_EXPIRY",
+      expiresAt: null,
+      confirmed: true,
+    };
+    await expect(verifyPlace(publisher, id, command, pool)).rejects.toThrow();
+    const evidence = (
+      await pool.query<{ id: string }>(
+        "INSERT INTO source_records(source_id,raw_payload_hash,notes) VALUES($1,repeat('c',64),'Synthetic verification test evidence, not factual') RETURNING id",
+        [sourceId],
+      )
+    ).rows[0]!.id;
+    await verifyPlace(
+      publisher,
+      id,
+      { ...command, evidenceSourceRecordId: evidence },
+      pool,
+    );
+    const verified = await getPlace(actor, id, pool);
+    expect(verified.geometryHistory).toHaveLength(2);
+    expect(verified.geometry?.verification_status).toBe("VERIFIED");
+    expect(verified.place.publication_status).toBe("DRAFT");
+    await expect(
+      publishPlace(publisher, id, { ...publication, version: 3 }, pool),
+    ).rejects.toThrow("VERIFICATION_REVIEW");
+    await savePlace(
+      actor,
+      {
+        ...data,
+        location: { longitude: 104.54, latitude: 21.26 },
+        geometryChangeConfirmed: true,
+      },
+      { id, version: 3 },
+      pool,
+    );
+    const corrected = await getPlace(actor, id, pool);
+    expect(corrected.geometry?.verification_status).toBe("UNKNOWN");
+    expect(
+      corrected.geometryHistory.some(
+        (g) => g.verification_status === "VERIFIED" && g.valid_to,
+      ),
+    ).toBe(true);
+    await verifyPlace(
+      publisher,
+      id,
+      {
+        ...command,
+        version: 4,
+        subject: "ACCESS",
+        evidenceSourceRecordId: evidence,
+      },
+      pool,
+    );
+    expect((await getPlace(actor, id, pool)).accessVerification).toBe(
+      "VERIFIED",
+    );
+    const invalid = await savePlace(
+      actor,
+      {
+        ...data,
+        name: "Missing geometry",
+        slug: "missing-geometry",
+        location: null,
+      },
+      null,
+      pool,
+    );
+    await expect(
+      bulkPlaces(
+        publisher,
+        {
+          action: "PUBLISH",
+          confirmed: true,
+          items: [
+            { id, ...publication, version: 5 },
+            { id: invalid, ...publication, version: 1 },
+          ],
+        },
+        pool,
+      ),
+    ).rejects.toThrow("GEOMETRY");
+    expect((await getPlace(actor, id, pool)).place.publication_status).toBe(
+      "DRAFT",
+    );
+  });
   it("rejects edits by read-only actors", async () => {
     await expect(
       savePlace({ ...actor, permissions: new Set(["read"]) }, {}, null, pool),
     ).rejects.toThrow("quyền");
   });
   it("public projection fails closed for drafts and source rights and preserves per-section trust", async () => {
+    await pool.query("UPDATE sources SET public_display='UNKNOWN' WHERE id=$1",[sourceId]);
     const data = PlaceInput.parse({
       name: "Đỉnh thử công khai",
       slug: "dinh-thu-cong-khai",
@@ -134,7 +266,9 @@ describe.skipIf(!connection)("place application service with PostGIS", () => {
       categoryIds: [categoryId],
       location: { longitude: 104.53, latitude: 21.26 },
       internalNotes: "PRIVATE_ADMIN_NOTE",
-      safetyNotes: [{ note: "Synthetic safety note", observedAt:null, expiresAt:null }],
+      safetyNotes: [
+        { note: "Synthetic safety note", observedAt: null, expiresAt: null },
+      ],
       media: [
         {
           mediaType: "IMAGE",

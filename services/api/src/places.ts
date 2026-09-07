@@ -120,7 +120,7 @@ export async function listPlaces(
   if (q.sourceId) filter("sr.source_id=?", q.sourceId);
   if (q.verificationStatus)
     filter(
-      "coalesce(CASE WHEN g.expires_at<=now() THEN 'EXPIRED'::verification_status ELSE g.verification_status END,'UNKNOWN')=?",
+      "coalesce(CASE WHEN g.verification_status<>'UNKNOWN' AND g.expires_at<=now() THEN 'EXPIRED'::verification_status ELSE g.verification_status END,'UNKNOWN')=?",
       q.verificationStatus,
     );
   if (q.missingCoordinate) where.push("g.id IS NULL");
@@ -135,7 +135,7 @@ export async function listPlaces(
         source_name: string | null;
       }
     >(
-      `SELECT p.*,g.verification_status,ST_X(g.geometry) AS longitude,ST_Y(g.geometry) AS latitude,s.name AS source_name FROM places p LEFT JOIN place_geometries g ON g.place_id=p.id AND g.valid_to IS NULL LEFT JOIN source_records sr ON sr.id=p.source_record_id LEFT JOIN sources s ON s.id=sr.source_id ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY p.updated_at DESC,p.id LIMIT $${values.length - 1} OFFSET $${values.length}`,
+      `SELECT p.*,coalesce(CASE WHEN g.verification_status<>'UNKNOWN' AND g.expires_at<=now() THEN 'EXPIRED'::verification_status ELSE g.verification_status END,'UNKNOWN') AS verification_status,ST_X(g.geometry) AS longitude,ST_Y(g.geometry) AS latitude,s.name AS source_name FROM places p LEFT JOIN place_geometries g ON g.place_id=p.id AND g.valid_to IS NULL LEFT JOIN source_records sr ON sr.id=p.source_record_id LEFT JOIN sources s ON s.id=sr.source_id ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY p.updated_at DESC,p.id LIMIT $${values.length - 1} OFFSET $${values.length}`,
       values,
     )
   ).rows;
@@ -238,11 +238,35 @@ export async function getPlace(
     place,
     data,
     geometry,
+    geometryEffectiveStatus:
+      geometry?.verification_status === "UNKNOWN"
+        ? "UNKNOWN"
+        : geometry?.expires_at && geometry.expires_at <= new Date()
+          ? "EXPIRED"
+          : (geometry?.verification_status ?? "UNKNOWN"),
     geometryHistory: history.rows,
     audit: events.rows,
     warnings: await spatialWarnings(connection, data.location),
     accessVerification: access.rows[0]?.verification_status ?? "UNKNOWN",
     safetyVerification: safety.rows.map((r) => r.verification_status),
+    verificationRecords: (
+      await connection.query(
+        "SELECT 'ACCESS' AS subject,place_id AS id,verification_status,verified_at,verification_method,evidence_source_record_id,freshness_policy,expires_at FROM place_access_contexts WHERE place_id=$1 UNION ALL SELECT 'SAFETY',id,verification_status,verified_at,verification_method,evidence_source_record_id,freshness_policy,expires_at FROM place_safety_notes WHERE place_id=$1",
+        [id],
+      )
+    ).rows,
+    nearbyRoad: geometry
+      ? ((
+          await connection.query<{
+            name: string | null;
+            distance_m: number;
+            version: string;
+          }>(
+            "SELECT rs.name,ST_Distance(rs.geometry::geography,ST_SetSRID(ST_MakePoint($1,$2),4326)::geography) AS distance_m,r.version FROM road_segments rs JOIN dataset_releases r ON r.id=rs.release_id WHERE r.qa_status='PUBLISHED' AND ST_DWithin(rs.geometry::geography,ST_SetSRID(ST_MakePoint($1,$2),4326)::geography,5000) ORDER BY distance_m LIMIT 1",
+            [geometry.longitude, geometry.latitude],
+          )
+        ).rows[0] ?? null)
+      : null,
   };
 }
 /** Shared transaction primitive for manual edits and explicit import commit. Caller supplies permission checks. */
@@ -488,4 +512,3 @@ export async function archivePlace(
     await audit(client, actor, "PLACE_ARCHIVED", "PLACE", id);
   }, connection);
 }
-

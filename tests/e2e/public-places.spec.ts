@@ -9,7 +9,7 @@ test.beforeAll(async () => {
   // Authored, explicitly synthetic fixture. No claim about a real place or source verification.
   sourceId = (
     await pool.query<{ id: string }>(
-      "INSERT INTO sources(name,category,status,public_display) VALUES('LAND authored synthetic UI fixture','TEST','ACTIVE','ALLOWED') RETURNING id",
+      "INSERT INTO sources(name,category,status,public_display) VALUES('LAND authored synthetic UI fixture','OTHER','ACTIVE','ALLOWED') RETURNING id",
     )
   ).rows[0]!.id;
   const sourceRecord = (

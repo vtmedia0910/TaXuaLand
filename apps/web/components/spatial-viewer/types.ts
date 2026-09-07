@@ -12,5 +12,6 @@ export interface SpatialViewerProps {
   onCandidate?: (position: Wgs84Position) => void;
   onDiagnostics?: (value: ViewerDiagnostics) => void;
   picker?: boolean;
+  focusRequest?: number;
   forceFallback?: boolean;
 }

@@ -51,7 +51,9 @@ export function effectiveVerification(
   value: Verification,
   now: Date,
 ): Verification["status"] {
-  return value.expiresAt && Date.parse(value.expiresAt) <= now.getTime()
+  return value.status !== "UNKNOWN" &&
+    value.expiresAt &&
+    Date.parse(value.expiresAt) <= now.getTime()
     ? "EXPIRED"
     : value.status;
 }

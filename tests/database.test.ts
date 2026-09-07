@@ -109,7 +109,12 @@ describe.skipIf(!connection)("real PostgreSQL/PostGIS integration", () => {
     const indexes = await pool.query(
       "SELECT indexdef FROM pg_indexes WHERE tablename IN ('place_geometries','road_segments','areas_of_interest') AND indexdef LIKE '%USING gist%'",
     );
-    expect(indexes.rowCount).toBe(3);
+    expect(indexes.rowCount).toBeGreaterThanOrEqual(4);
+    expect(
+      indexes.rows.some((row) =>
+        row.indexdef.includes("road_segments_geography_gist"),
+      ),
+    ).toBe(true);
     const grants = await pool.query(
       "SELECT * FROM information_schema.table_privileges WHERE grantee='PUBLIC' AND table_name='places'",
     );
@@ -155,4 +160,3 @@ describe.skipIf(!connection)("real PostgreSQL/PostGIS integration", () => {
     ).toBe(1);
   });
 });
-

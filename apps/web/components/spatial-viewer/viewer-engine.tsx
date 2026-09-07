@@ -334,7 +334,8 @@ export default function ViewerEngine(props: SpatialViewerProps) {
   useEffect(() => {
     const v = viewer.current;
     if (!ready || !v || v.isDestroyed()) return;
-    const p = props.points?.find((p) => p.id === props.selectedId);
+    if (callbacks.current.picker && !props.focusRequest) return;
+    const p = callbacks.current.points?.find((p) => p.id === props.selectedId);
     if (p)
       v.camera.flyToBoundingSphere(
         new Cesium.BoundingSphere(
@@ -356,7 +357,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           },
         },
       );
-  }, [ready, generation, props.selectedId, props.points]);
+  }, [ready, generation, props.selectedId, props.focusRequest]);
   useEffect(() => {
     const v = viewer.current;
     if (!ready || !v || v.isDestroyed()) return;
@@ -432,8 +433,12 @@ export default function ViewerEngine(props: SpatialViewerProps) {
                 {layer.label}
               </label>
             ))}
-            <button onClick={() => reset()}>Đặt lại góc nhìn</button>
-            <button onClick={() => reset(true)}>Nhìn từ trên</button>
+            <button type="button" onClick={() => reset()}>
+              Đặt lại góc nhìn
+            </button>
+            <button type="button" onClick={() => reset(true)}>
+              Nhìn từ trên
+            </button>
           </div>
           {!ready && (
             <div className="viewer-loading" role="status">

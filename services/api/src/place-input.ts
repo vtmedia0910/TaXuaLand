@@ -126,8 +126,16 @@ export const AdminListInput = z.object({
     .enum(["UNKNOWN", "DECLARED", "VERIFIED", "EXPIRED"])
     .optional(),
   sourceId: z.uuid().optional(),
-  missingCoordinate: z.coerce.boolean().optional(),
-  stale: z.coerce.boolean().optional(),
+  missingCoordinate: z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .or(z.boolean())
+    .optional(),
+  stale: z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .or(z.boolean())
+    .optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
