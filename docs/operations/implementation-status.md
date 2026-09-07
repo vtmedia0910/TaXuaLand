@@ -7,7 +7,7 @@ Milestones (in order):
 
 1. Repository foundation — PASS: install, lint, typecheck, unit test and production build; HTTP 200 and real browser screenshot inspected on 2026-09-07.
 2. Domain contracts and ADRs — PASS: 21 unit tests, lint, typecheck, production build; parser and trust transitions exercised directly. ADRs 001–008 recorded.
-3. Database + PostGIS — pending; local runtime prerequisite under investigation.
+3. Database + PostGIS — PASS: real PostgreSQL 17.11/PostGIS 3.6.2; fresh disposable database migrations and repeat migration; spatial/geodesic query, GiST indexes, immutable geometry history. All 25 tests, lint, typecheck and build pass. GitHub CI for milestones 1–2 also passed.
 4. Admin authentication/authorization — pending.
 5. Place application services/CRUD — pending.
 6. Source/dataset registries — pending.

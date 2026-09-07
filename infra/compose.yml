@@ -1,0 +1,19 @@
+name: taxua-land
+services:
+  database:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: land
+      POSTGRES_USER: land_owner
+      POSTGRES_PASSWORD: ${DATABASE_OWNER_PASSWORD:?Set a LAND-only password}
+    ports:
+      - '127.0.0.1:55432:5432'
+    volumes:
+      - land_database:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U land_owner -d land']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+volumes:
+  land_database:
