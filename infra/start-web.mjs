@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { spawn } from "node:child_process";
 import pg from "pg";
 import { RuntimeEnvironment } from "../packages/config/src/runtime.ts";
+import { deploymentConfig } from "../packages/config/src/deployment.ts";
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 process.env.LAND_WORKSPACE_ROOT ||= resolve(import.meta.dirname, "..");
 process.env.NODE_ENV = "production";
@@ -22,9 +23,15 @@ try {
     ),
     constants.R_OK,
   );
-  const imports = resolve(config.data.LAND_WORKSPACE_ROOT, "work/imports");
-  await mkdir(imports, { recursive: true, mode: 0o700 });
-  await access(imports, constants.W_OK);
+  const deployment = deploymentConfig(process.env);
+  if (deployment.OBJECT_STORE_DRIVER === "local") {
+    const imports = resolve(
+      config.data.LAND_WORKSPACE_ROOT,
+      "work/object-store/private",
+    );
+    await mkdir(imports, { recursive: true, mode: 0o700 });
+    await access(imports, constants.W_OK);
+  }
   pool = new pg.Pool({
     connectionString: config.data.DATABASE_URL,
     connectionTimeoutMillis: 5000,
@@ -56,13 +63,13 @@ try {
     throw Error("Unsafe role");
 } catch {
   throw Error(
-    "LAND startup validation failed: check dedicated database identity, least-privileged runtime role and private parser volume (values suppressed)",
+    "LAND startup validation failed: check dedicated database identity, least-privileged runtime role, parser and storage configuration (values suppressed)",
   );
 } finally {
   await pool?.end();
 }
 console.info(
-  "LAND runtime configuration, product isolation and private parser volume validated.",
+  "LAND runtime configuration, product isolation, parser and storage validated.",
 );
 const server = spawn(
   process.execPath,

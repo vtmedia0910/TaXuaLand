@@ -153,7 +153,7 @@ try {
     ],
     [
       "INSERT,UPDATE",
-      "places,place_categories,import_batches,import_rows,sources,datasets,dataset_releases,dataset_assets,pipeline_runs,integration_providers,integration_health_checks",
+      "places,place_categories,import_batches,import_uploads,import_rows,sources,datasets,dataset_releases,dataset_assets,pipeline_runs,integration_providers,integration_health_checks",
     ],
     ["INSERT", "place_geometries"],
     ["UPDATE(valid_to)", "place_geometries"],
@@ -292,6 +292,28 @@ try {
             if (error.code !== "ENOENT") throw error;
           },
         );
+        const upload = (
+          await pool.query(
+            "SELECT raw_key,inspection_key FROM import_uploads WHERE batch_id=$1 AND driver='local'",
+            [batchId],
+          )
+        ).rows[0];
+        for (const key of [upload?.raw_key, upload?.inspection_key]) {
+          if (!key) continue;
+          if (
+            !new RegExp(
+              `^imports/(raw|inspection)/${batchId}/[a-f0-9-]{36}\\.(xlsx|json)$`,
+            ).test(key)
+          ) {
+            process.exitCode = 1;
+            continue;
+          }
+          await unlink(resolve(root, "work/object-store/private", key)).catch(
+            (error: NodeJS.ErrnoException) => {
+              if (error.code !== "ENOENT") throw error;
+            },
+          );
+        }
       }
       await pool.end();
     }

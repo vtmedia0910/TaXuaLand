@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { readFile, unlink } from "node:fs/promises";
+import { unlink } from "node:fs/promises";
+import {
+  readImportInspection,
+  importStorage,
+} from "../services/api/src/import-storage";
 import pg from "pg";
 import ExcelJS from "exceljs";
 import { describe, beforeAll, afterAll, it, expect } from "vitest";
@@ -54,6 +58,13 @@ describe.skipIf(!connection)("workbook staging with real PostGIS", () => {
     );
   }, 30000);
   afterAll(async () => {
+    if (pool)
+      for (const row of (
+        await pool.query("SELECT raw_key,inspection_key FROM import_uploads")
+      ).rows) {
+        if (row.raw_key) await importStorage().store.delete(row.raw_key);
+        await importStorage().store.delete(row.inspection_key);
+      }
     for (const id of ids)
       await unlink(`work/imports/${id}.json`).catch(() => {});
     await pool?.end();
@@ -105,7 +116,7 @@ describe.skipIf(!connection)("workbook staging with real PostGIS", () => {
     const inspection = await importBatch(actor, result.id, pool);
     expect(inspection.sheets[1]?.blocked).toBe(true);
     expect(
-      await readFile(`work/imports/${result.id}.json`, "utf8"),
+      JSON.stringify(await readImportInspection(inspection.batch, pool)),
     ).not.toContain("SYNTHETIC_ACCOUNT_SECRET");
     await expect(
       validateImport(

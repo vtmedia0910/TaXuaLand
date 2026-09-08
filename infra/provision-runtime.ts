@@ -28,7 +28,7 @@ try {
     "GRANT INSERT ON audit_events,source_records,import_row_actions,import_row_revisions,place_content_revisions TO land_app",
   );
   await client.query(
-    "GRANT INSERT,UPDATE ON places,place_categories,import_batches,import_rows,sources,datasets,dataset_releases,dataset_assets,pipeline_runs,integration_providers,integration_health_checks TO land_app",
+    "GRANT INSERT,UPDATE ON places,place_categories,import_batches,import_uploads,import_rows,sources,datasets,dataset_releases,dataset_assets,pipeline_runs,integration_providers,integration_health_checks TO land_app",
   );
   await client.query("GRANT INSERT ON place_geometries TO land_app");
   await client.query("GRANT UPDATE(valid_to) ON place_geometries TO land_app");
