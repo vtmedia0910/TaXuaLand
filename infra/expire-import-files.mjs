@@ -1,4 +1,5 @@
 import pg from "pg";
+import { databaseOptions } from "../packages/config/src/database.ts";
 import {
   expireImportObjects,
   migrateLegacyInspections,
@@ -7,7 +8,7 @@ import { unlink, readdir, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 const root = resolve(process.env.LAND_WORKSPACE_ROOT ?? "."),
   directory = resolve(root, "work/imports");
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new pg.Pool(databaseOptions(process.env, true));
 try {
   const identity = (
     await pool.query("SELECT product FROM product_identity WHERE id=true")

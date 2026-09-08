@@ -1,11 +1,12 @@
 import pg from "pg";
+import { databaseOptions } from "../packages/config/src/database.ts";
 const ownerUrl = process.env.DATABASE_URL,
   password = process.env.DATABASE_APP_PASSWORD;
 if (!ownerUrl || !password || password.length < 32)
   throw new Error(
     "Owner URL and a new LAND-only app password (32+ characters) required",
   );
-const client = new pg.Client({ connectionString: ownerUrl });
+const client = new pg.Client(databaseOptions(process.env, true));
 try {
   await client.connect();
   const identity = await client.query(
@@ -13,6 +14,7 @@ try {
   );
   if (identity.rows[0]?.product !== "TAXUA_LAND")
     throw new Error("Not a LAND database");
+  await client.query("BEGIN");
   await client.query(
     `CREATE ROLE land_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT PASSWORD ${pg.escapeLiteral(password)}`,
   );
@@ -35,8 +37,14 @@ try {
   await client.query(
     "GRANT INSERT,UPDATE,DELETE ON place_category_links,place_visit_contexts,place_access_contexts,place_safety_notes,place_media,external_references,import_row_errors TO land_app",
   );
+  await client.query("COMMIT");
   console.log(
     "LAND runtime role created without ownership or role-management privileges.",
+  );
+} catch {
+  await client.query("ROLLBACK").catch(() => {});
+  throw new Error(
+    "LAND runtime provisioning failed; transaction rolled back (values suppressed)",
   );
 } finally {
   await client.end();

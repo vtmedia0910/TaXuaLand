@@ -3,6 +3,7 @@ import { open, realpath, lstat } from "node:fs/promises";
 import { resolve, relative, isAbsolute, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { databaseOptions } from "../packages/config/src/database.ts";
 import { z } from "zod";
 import { TerrainManifest } from "../packages/spatial-types/src/terrain.ts";
 import {
@@ -262,11 +263,7 @@ if (
       throw Error(
         "Configure S3 published storage and approved HTTPS public base",
       );
-    pool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL,
-      max: 1,
-      connectionTimeoutMillis: 5000,
-    });
+    pool = new pg.Pool(databaseOptions(process.env, true));
     store = new S3CompatibleObjectStore(process.env, "published");
     console.log(
       JSON.stringify(

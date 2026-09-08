@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @land/web dev",
-    "build": "pnpm --filter @land/web build && node infra/check-client-syntax.mjs",
+    "build": "pnpm --filter @land/web build && node infra/check-client-syntax.mjs && node infra/prepare-server-artifact.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.e2e.json && pnpm --filter @land/web typecheck",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",

@@ -2,6 +2,7 @@ import { fork } from "node:child_process";
 import { resolve } from "node:path";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { existsSync } from "node:fs";
 import {
   InspectedWorkbook,
   IMPORT_LIMITS,
@@ -9,9 +10,16 @@ import {
 import { AppError } from "./errors.ts";
 let active = 0;
 export function landWorkspace() {
-  return resolve(
-    process.env.LAND_WORKSPACE_ROOT ||
-      (process.cwd().endsWith("web") ? "../.." : "."),
+  if (process.env.LAND_WORKSPACE_ROOT)
+    return resolve(process.env.LAND_WORKSPACE_ROOT);
+  // Both Next's monorepo cwd and Vercel's traced function root are supported.
+  for (const root of [process.cwd(), resolve(process.cwd(), "../..")])
+    if (existsSync(resolve(root, "workers/import/src/parse-workbook.ts")))
+      return root;
+  throw new AppError(
+    "IMPORT_WORKER_FAILED",
+    503,
+    "Không tìm thấy bộ xử lý workbook.",
   );
 }
 export async function inspectWorkbookIsolated(

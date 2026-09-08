@@ -2,11 +2,34 @@ import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { databaseOptions } from "../packages/config/src/database.ts";
 type PgPool = InstanceType<typeof pg.Pool>;
 export async function migrate(pool: PgPool): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query("SELECT pg_advisory_lock(73571000)");
+    const identity = await client.query(
+      "SELECT to_regclass('public.product_identity') AS identity",
+    );
+    if (identity.rows[0]?.identity) {
+      if (
+        (
+          await client.query(
+            "SELECT product FROM product_identity WHERE id=true",
+          )
+        ).rows[0]?.product !== "TAXUA_LAND"
+      )
+        throw new Error("Not a LAND database");
+    } else {
+      // Permit empty databases with provider-installed extensions, not unrelated products.
+      const existing = await client.query(`SELECT 1 FROM pg_class c
+        JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m')
+        AND NOT EXISTS (SELECT 1 FROM pg_depend d
+          WHERE d.classid='pg_class'::regclass AND d.objid=c.oid AND d.deptype='e') LIMIT 1`);
+      if (existing.rowCount)
+        throw new Error("Migration requires an empty dedicated LAND database");
+    }
     await client.query(
       "CREATE TABLE IF NOT EXISTS land_migrations (name text PRIMARY KEY, checksum text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())",
     );
@@ -45,10 +68,14 @@ export async function migrate(pool: PgPool): Promise<void> {
 }
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL required");
-  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  const pool = new pg.Pool(databaseOptions(process.env, true));
   try {
     await migrate(pool);
     console.log("LAND migrations applied");
+  } catch {
+    throw new Error(
+      "LAND migration failed; inspect operator database and migration checksums (values suppressed)",
+    );
   } finally {
     await pool.end();
   }

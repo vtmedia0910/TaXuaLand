@@ -71,13 +71,14 @@ test("public search selects real API marker and displays UNKNOWN without leaking
     page.getByRole("heading", { name: "Đỉnh kiểm thử giao diện" }),
   ).toBeVisible({ timeout: 15000 });
   await expect(page).toHaveURL(new RegExp(`place=${slug}`));
-  await expect(page.getByTestId("spatial-viewer")).toHaveAttribute(
-    "data-settled",
-    "true",
-  );
+  // Camera flight completion precedes stable terrain frames; wait in that order.
   await expect(page.getByTestId("spatial-viewer")).toHaveAttribute(
     "data-focused-id",
     placeId,
+  );
+  await expect(page.getByTestId("spatial-viewer")).toHaveAttribute(
+    "data-settled",
+    "true",
   );
   await expect(page.locator(".explorer")).toHaveCSS("display", "grid");
   const response = await page.request.get(`/api/public/places/${slug}`);

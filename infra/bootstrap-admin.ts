@@ -1,7 +1,8 @@
 import pg from "pg";
+import { databaseOptions } from "../packages/config/src/database.ts";
 import { hashPassword } from "../services/api/src/auth.ts";
 import { z } from "zod";
-const env = z
+const parsed = z
   .object({
     DATABASE_URL: z.string().url(),
     SERVER_BOOTSTRAP_EMAIL: z.email(),
@@ -14,8 +15,11 @@ const env = z
       "SYSTEM_ADMIN",
     ]),
   })
-  .parse(process.env);
-const client = new pg.Client({ connectionString: env.DATABASE_URL });
+  .safeParse(process.env);
+if (!parsed.success)
+  throw new Error("LAND bootstrap configuration invalid (values suppressed)");
+const env = parsed.data;
+const client = new pg.Client(databaseOptions(process.env, true));
 try {
   await client.connect();
   const identity = await client.query(
@@ -37,9 +41,11 @@ try {
   console.log(
     "LAND administrator created. Existing accounts were not changed.",
   );
-} catch (error) {
+} catch {
   await client.query("ROLLBACK").catch(() => {});
-  throw error;
+  throw new Error(
+    "LAND administrator bootstrap failed; existing accounts unchanged (values suppressed)",
+  );
 } finally {
   await client.end();
 }

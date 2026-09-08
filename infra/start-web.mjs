@@ -6,6 +6,8 @@ import { spawn } from "node:child_process";
 import pg from "pg";
 import { RuntimeEnvironment } from "../packages/config/src/runtime.ts";
 import { deploymentConfig } from "../packages/config/src/deployment.ts";
+import { databaseOptions } from "../packages/config/src/database.ts";
+import { assertRuntimeDatabase } from "../services/api/src/database-readiness.ts";
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 process.env.LAND_WORKSPACE_ROOT ||= resolve(import.meta.dirname, "..");
 process.env.NODE_ENV = "production";
@@ -32,35 +34,8 @@ try {
     await mkdir(imports, { recursive: true, mode: 0o700 });
     await access(imports, constants.W_OK);
   }
-  pool = new pg.Pool({
-    connectionString: config.data.DATABASE_URL,
-    connectionTimeoutMillis: 5000,
-    statement_timeout: 5000,
-    max: 1,
-  });
-  const product = (
-    await pool.query("SELECT product FROM product_identity WHERE id=true")
-  ).rows[0]?.product;
-  const role = (
-    await pool.query(
-      "SELECT rolsuper,rolcreatedb,rolcreaterole FROM pg_roles WHERE rolname=current_user",
-    )
-  ).rows[0];
-  const privileges = (
-    await pool.query(
-      "SELECT has_table_privilege(current_user,'admin_users','UPDATE') AS credentials,has_table_privilege(current_user,'audit_events','DELETE') AS audit",
-    )
-  ).rows[0];
-  if (
-    product !== "TAXUA_LAND" ||
-    !role ||
-    role.rolsuper ||
-    role.rolcreatedb ||
-    role.rolcreaterole ||
-    privileges.credentials ||
-    privileges.audit
-  )
-    throw Error("Unsafe role");
+  pool = new pg.Pool({ ...databaseOptions(process.env), max: 1 });
+  await assertRuntimeDatabase(pool);
 } catch {
   throw Error(
     "LAND startup validation failed: check dedicated database identity, least-privileged runtime role, parser and storage configuration (values suppressed)",
