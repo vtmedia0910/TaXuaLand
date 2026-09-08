@@ -34,6 +34,7 @@ export default async function AdminLayout({
         <nav>
           <Link href="/admin">Tổng quan</Link>
           <Link href="/admin/places">Địa điểm</Link>
+          <Link href="/admin/imports">Excel import</Link>
           <Link href="/admin/sources">Nguồn dữ liệu</Link>
           <Link href="/admin/datasets">Dataset &amp; release</Link>
           <Link href="/admin/diagnostics">Chẩn đoán</Link>

@@ -6,5 +6,7 @@ export default defineConfig({
     include: ["tests/**/*.test.ts"],
     exclude: ["tests/e2e/**"],
     testTimeout: 15000,
+    // Disposable PostGIS databases can wait for Windows checkpoint/file cleanup.
+    hookTimeout: 30000,
   },
 });

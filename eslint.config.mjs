@@ -5,6 +5,7 @@ const config = [
   {
     ignores: [
       "**/node_modules/**",
+      ".pnpm-store/**",
       "**/.next/**",
       "**/public/cesium/**",
       "**/next-env.d.ts",

@@ -69,13 +69,17 @@ button:disabled {
 }
 .admin-shell {
   display: grid;
-  grid-template-columns: 16rem 1fr;
+  grid-template-columns: 16rem minmax(0, 1fr);
   min-height: 100vh;
 }
 .admin-shell aside {
   padding: 2rem;
   border-right: 1px solid #344254;
   background: #101d2f;
+}
+.admin-shell main {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .admin-shell nav {
   display: grid;
@@ -84,7 +88,7 @@ button:disabled {
 }
 @media (max-width: 760px) {
   .admin-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .admin-shell aside {
     padding: 1rem;
@@ -481,4 +485,25 @@ fieldset {
   .card {
     padding: 1rem;
   }
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+}
+.summary-grid strong {
+  font-size: 1.7rem;
+}
+.import-rows {
+  max-height: 480px;
+}
+.import-rows table {
+  min-width: 640px;
+}
+.import-rows tr[aria-selected="true"] {
+  background: #223e56;
+}
+.import-rows td {
+  max-width: 26rem;
+  overflow-wrap: anywhere;
 }

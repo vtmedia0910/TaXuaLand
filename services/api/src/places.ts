@@ -366,7 +366,9 @@ export async function savePlaceInTransaction(
       "UPDATE places SET name=$1,slug=$2,short_description=$3,description=$4,area_name=$5,internal_notes=$6,source_record_id=$7,updated_by=$8,updated_at=now(),version=version+1,publication_status='DRAFT',review_required=true WHERE id=$9",
       [...args, id],
     );
-  if (geometryChanged) {
+  // Imported observations never inherit verification from an older observation,
+  // even when their coordinate numbers happen to match.
+  if (geometryChanged || (importSourceRecordId && data.location)) {
     if (oldGeometry)
       await client.query(
         "UPDATE place_geometries SET valid_to=clock_timestamp() WHERE id=$1",
