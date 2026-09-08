@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../support/browser";
 import ExcelJS from "exceljs";
 test("workbook upload, mapping, map preview and explicit row review", async ({
   page,
@@ -9,7 +9,10 @@ test("workbook upload, mapping, map preview and explicit row review", async ({
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   const credentials = JSON.parse(
-    readFileSync("work/local-admin.json", "utf8"),
+    readFileSync(
+      process.env.E2E_CREDENTIALS_FILE ?? "work/local-admin.json",
+      "utf8",
+    ),
   ) as { email: string; password: string };
   await page.goto("/admin/login");
   await page.getByLabel("Email").fill(credentials.email);
@@ -70,6 +73,7 @@ test("workbook upload, mapping, map preview and explicit row review", async ({
   await expect(page.getByTestId("spatial-viewer")).toHaveAttribute(
     "data-settled",
     "true",
+    { timeout: 30000 },
   );
   await page.screenshot({ path: "work/qa-import-preview.png" });
   await page

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/browser";
 test("Cesium shell, layer controls, camera reset and mobile viewport", async ({
   page,
 }) => {
@@ -35,6 +35,7 @@ test("WebGL unavailable yields a usable fallback", async ({ page }) => {
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (
+      this: HTMLCanvasElement,
       type: string,
       ...args: unknown[]
     ) {

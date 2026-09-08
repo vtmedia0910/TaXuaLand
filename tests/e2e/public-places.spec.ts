@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../support/browser";
 import pg from "pg";
 import { randomUUID } from "node:crypto";
 if (!process.env.DATABASE_URL) process.loadEnvFile(".env.local");
