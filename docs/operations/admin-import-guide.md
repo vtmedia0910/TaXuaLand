@@ -1,0 +1,16 @@
+# Import Excel có review
+
+Chỉ DATA_EDITOR hoặc tài khoản có quyền `import` được upload/review/commit. Import luôn tạo/cập nhật **DRAFT**, không xuất bản hoặc xác minh. File kiểm tra được lưu riêng bảy ngày; giữ bản gốc ở kho nghiệp vụ của bạn nếu cần đối chiếu lâu dài.
+
+1. Đăng ký nguồn có metadata thật. Mở **Excel import**, chọn nguồn cho lô và upload `.xlsx` tối đa 8 MiB. Không dùng `.xlsm`, sheet tài khoản/credential, dữ liệu mã hóa hoặc công thức làm dữ liệu chính. Parser không thực thi công thức; cached formula cũng không được nhập như giá trị đã xác thực.
+2. Chọn sheet phù hợp. Sheet ẩn/tài khoản bị chặn không thể mapping. Giới hạn mỗi sheet: 2.000 dòng, 80 cột. Các giới hạn ZIP/text/timeout được kiểm tra trước khi staging.
+3. Kiểm tra mapping gợi ý theo header; một trường chỉ nhận một cột. Tên bắt buộc. Mapping tọa độ chấp nhận chuỗi vĩ độ, kinh độ theo định dạng hỗ trợ; sau chuẩn hóa xem lại hai giá trị có tên. Google Maps URL chỉ cung cấp ứng viên đối chiếu, không tự thay vị trí. File VN-2000/local CRS phải được chuyển đổi có provenance bằng pipeline phù hợp trước khi vào luồng WGS84 này.
+4. Xác nhận đã kiểm tra sheet, thứ tự tọa độ và mapping, rồi tạo staging. Bước này không ghi vào bảng địa điểm. Mapping sai cần upload lô mới; không sửa raw row hoặc đè lô đã review.
+5. Đọc tổng hợp VALID/WARNING/INVALID và xem từng dòng trên bản đồ. Điểm invalid có thể vẫn được hiển thị để đối chiếu, không có nghĩa là được phép commit. UNKNOWN là thiếu bằng chứng, không phải mặc định đúng. Thiếu ảnh/map/reference có thể tạo cảnh báo; tên trống/tọa độ sai là lỗi chặn.
+6. Chọn CREATE, UPDATE, SKIP hoặc REVIEW_LATER cho từng dòng. Dòng INVALID chỉ được SKIP hoặc sửa/kiểm tra lại. Dòng WARNING cần chấp nhận cảnh báo rõ ràng. Ứng viên trùng theo slug/tên/URL/vị trí gần 20 m là đề nghị đối chiếu, không tự merge.
+7. Nếu sửa dữ liệu normalized, xác nhận đã đối chiếu nguồn. Lịch sử trước/sau được lưu, raw/hash gốc giữ nguyên. Hệ thống đưa dòng về REVIEW_LATER để bạn đọc cảnh báo mới và quyết định lần nữa. Revalidate cập nhật AOI/đường/trùng lặp hiện tại và cũng yêu cầu review lại.
+8. UPDATE cần chọn đúng target và xác nhận **thay thế toàn bộ nội dung/vị trí** của target bằng dòng normalized, không phải vá vài ô. Trường trống có thể xóa nội dung hiện tại; đối chiếu đầy đủ trước khi chấp nhận. Target version được ghi lại. Lịch sử geometry/content cũ được giữ, nhưng quan sát mới vẫn UNKNOWN, kể cả tọa độ giống tọa độ đã VERIFIED trước đó.
+9. Khi mọi dòng đã có quyết định và cảnh báo được xử lý, xác nhận commit vào bản nháp. Hệ thống kiểm tra lại source, AOI, category, trùng mới và target version trong transaction. Có lỗi ở bất kỳ dòng nào thì không commit một phần. Sửa/revalidate rồi review lại; không bỏ qua gate bằng SQL.
+10. Đọc số tạo/cập nhật/bỏ qua, mở các bản nháp và kiểm tra provenance/geometry. Retry commit cùng batch trả lại kết quả đã lưu, không tạo bản sao. Xuất bản là thao tác khác của người có quyền publish sau review.
+
+Không nhập key/API credential vào bất kỳ trường sheet nào. Sheet nguồn chỉ cung cấp nhãn; nguồn runtime là nguồn đã chọn trong registry. Import không lấy dữ liệu BIKER/TRIP, không geocode tự động và không xác nhận an toàn/đường đi từ khoảng cách địa lý.
