@@ -1,0 +1,16 @@
+{
+  "dem": {
+    "filename": "Copernicus_DSM_COG_10_N21_00_E104_00_DEM.tif",
+    "url": "https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N21_00_E104_00_DEM/Copernicus_DSM_COG_10_N21_00_E104_00_DEM.tif",
+    "sha256": "fbcd4fdeb86499195556702e9030c5907474ddfdcc7a4a088b8bc233549fe595",
+    "bytes": 46877427,
+    "downloadedAt": "2026-09-07T22:22:38.000225+00:00"
+  },
+  "geoid": {
+    "filename": "us_nga_egm08_25.tif",
+    "url": "https://cdn.proj.org/us_nga_egm08_25.tif",
+    "sha256": "4191d471eefebf24091b56dbc604353cb3b8cf8cc70e448bb9ae56a272bef17a",
+    "bytes": 80585622,
+    "downloadedAt": "2026-09-07T22:22:53.460Z"
+  }
+}

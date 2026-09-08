@@ -159,4 +159,63 @@ describe.skipIf(!connection)("real PostgreSQL/PostGIS integration", () => {
         .failures,
     ).toBe(1);
   });
+  it("published release checksums and public asset URLs cannot be rewritten or moved", async () => {
+    const source = (
+      await pool.query(
+        "INSERT INTO sources(name,category) VALUES('Synthetic terrain','TERRAIN') RETURNING id",
+      )
+    ).rows[0].id;
+    const dataset = (
+      await pool.query(
+        "INSERT INTO datasets(code,name,kind,source_id) VALUES('TEST_TERRAIN','Test','TERRAIN',$1) RETURNING id",
+        [source],
+      )
+    ).rows[0].id;
+    const release = (
+      await pool.query(
+        "INSERT INTO dataset_releases(dataset_id,version,source_version,pipeline_version,source_crs,target_crs,checksum) VALUES($1,'test-1','fixture','test','EPSG:4326','EPSG:4326',repeat('a',64)) RETURNING id",
+        [dataset],
+      )
+    ).rows[0].id;
+    const asset = (
+      await pool.query(
+        "INSERT INTO dataset_assets(release_id,zone,object_key,checksum,byte_size,content_type,public_url) VALUES($1,'published','test-1/manifest.json',repeat('a',64),10,'application/json','/spatial/test-1/manifest.json') RETURNING id",
+        [release],
+      )
+    ).rows[0].id;
+    await pool.query(
+      "UPDATE dataset_releases SET qa_status='PUBLISHED',published_at=now() WHERE id=$1",
+      [release],
+    );
+    await expect(
+      pool.query(
+        "UPDATE dataset_releases SET checksum=repeat('b',64) WHERE id=$1",
+        [release],
+      ),
+    ).rejects.toThrow("immutable");
+    await expect(
+      pool.query(
+        "UPDATE dataset_assets SET public_url='/different' WHERE id=$1",
+        [asset],
+      ),
+    ).rejects.toThrow("immutable");
+    await expect(
+      pool.query("DELETE FROM dataset_assets WHERE id=$1", [asset]),
+    ).rejects.toThrow("immutable");
+    await expect(
+      pool.query(
+        "INSERT INTO dataset_assets(release_id,zone,object_key,checksum,byte_size,content_type) VALUES($1,'published','new.bin',repeat('a',64),10,'application/octet-stream')",
+        [release],
+      ),
+    ).rejects.toThrow("immutable");
+    await pool.query(
+      "UPDATE dataset_releases SET qa_status='RETIRED' WHERE id=$1",
+      [release],
+    );
+    await expect(
+      pool.query("UPDATE dataset_releases SET qa_status='DRAFT' WHERE id=$1", [
+        release,
+      ]),
+    ).rejects.toThrow("retired");
+  });
 });

@@ -12,6 +12,7 @@ export const LAND_VIEWER_BASE: ViewerConfig = {
   },
   terrainUrl: null,
   terrainRelease: null,
+  terrainChecksum: null,
   roadsUrl: null,
   roadsRelease: null,
   imagery: "NEUTRAL_GRID",

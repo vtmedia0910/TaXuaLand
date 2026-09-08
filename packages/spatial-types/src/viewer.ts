@@ -17,6 +17,11 @@ export const ViewerConfig = z
       .strict(),
     terrainUrl: z.string().nullable(),
     terrainRelease: z.string().nullable(),
+    terrainChecksum: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .nullable()
+      .default(null),
     roadsUrl: z.string().nullable(),
     roadsRelease: z.string().nullable(),
     imagery: z.literal("NEUTRAL_GRID"),

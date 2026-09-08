@@ -7,6 +7,7 @@ import type {
   ViewerDiagnostics,
 } from "../../../../packages/spatial-types/src/viewer";
 import type { SpatialViewerProps } from "./types";
+import { loadLandTerrain } from "./terrain-provider";
 declare global {
   interface Window {
     CESIUM_BASE_URL: string;
@@ -31,6 +32,11 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     [focusedId, setFocusedId] = useState<string | null>(null),
     [failed, setFailed] = useState(false),
     [notice, setNotice] = useState(""),
+    [terrainState, setTerrainState] = useState("UNCONFIGURED"),
+    [terrainDetails, setTerrainDetails] = useState(""),
+    [roadsState, setRoadsState] = useState("UNCONFIGURED"),
+    [renderedWidth, setRenderedWidth] = useState(0),
+    [renderState, setRenderState] = useState("INITIALIZING"),
     [visible, setVisible] = useState<Record<LayerId, boolean>>({
       terrain: true,
       imagery: true,
@@ -49,6 +55,8 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       instance: Cesium.Viewer | null = null,
       handler: Cesium.ScreenSpaceEventHandler | null = null;
     const cleanup: Array<() => void> = [];
+    const controller = new AbortController();
+    cleanup.push(() => controller.abort());
     const start = performance.now();
     const diagnostics: ViewerDiagnostics = {
       initialized: false,
@@ -202,6 +210,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       setGeneration((value) => value + 1);
       emit();
       let cameraMoving = false;
+      let stableFrames = 0;
       cleanup.push(
         v.camera.moveStart.addEventListener(() => {
           cameraMoving = true;
@@ -215,7 +224,24 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         }),
       );
       const first = v.scene.postRender.addEventListener(() => {
-        if (!cameraMoving && v.scene.globe.tilesLoaded) setSettled(true);
+        setRenderedWidth(v.scene.canvas.clientWidth);
+        setRenderState(
+          `tiles:${v.scene.globe.tilesLoaded};data:${v.dataSourceDisplay.ready};frames:${Math.min(stableFrames, 2)}`,
+        );
+        if (
+          !cameraMoving &&
+          v.scene.globe.tilesLoaded &&
+          v.dataSourceDisplay.ready &&
+          (!props.config.terrainUrl || diagnostics.terrainStatus === "READY")
+        ) {
+          stableFrames++;
+          setSettled(stableFrames >= 2);
+          if (stableFrames === 1) v.scene.requestRender();
+        } else {
+          stableFrames = 0;
+          setSettled(false);
+          if (diagnostics.terrainStatus !== "FAILED") v.scene.requestRender();
+        }
         if (diagnostics.firstFrameMs === null) {
           diagnostics.firstFrameMs = Math.round(performance.now() - start);
           emit();
@@ -231,22 +257,60 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       );
       if (props.config.terrainUrl) {
         try {
-          const provider = await Cesium.CesiumTerrainProvider.fromUrl(
+          if (!props.config.terrainChecksum)
+            throw Error("TERRAIN_CHECKSUM_REQUIRED");
+          const { provider, manifest } = await loadLandTerrain(
             props.config.terrainUrl,
-            { requestVertexNormals: false },
+            props.config.terrainChecksum,
+            controller.signal,
           );
           if (disposed) return;
+          setTerrainDetails(
+            `${manifest.source} · DSM ${manifest.resolutionMeters} m · ${manifest.verticalDatum}. ${manifest.liabilityNotice}`,
+          );
           terrain.current = provider;
+          setSettled(false);
           if (visibility.current.terrain) v.terrainProvider = provider;
+          const ramp = document.createElement("canvas");
+          ramp.width = 256;
+          ramp.height = 1;
+          const context = ramp.getContext("2d");
+          if (context) {
+            const gradient = context.createLinearGradient(0, 0, 256, 0);
+            for (const [stop, color] of [
+              [0, "#1b4b47"],
+              [0.25, "#427554"],
+              [0.5, "#8d9b62"],
+              [0.75, "#b6a480"],
+              [1, "#e5ddca"],
+            ] as const)
+              gradient.addColorStop(stop, color);
+            context.fillStyle = gradient;
+            context.fillRect(0, 0, 256, 1);
+            v.scene.globe.material = Cesium.Material.fromType("ElevationRamp", {
+              image: ramp,
+              minimumHeight: manifest.heightRangeMeters[0],
+              maximumHeight: manifest.heightRangeMeters[1],
+            });
+          }
+          v.scene.requestRender();
           diagnostics.terrainStatus = "READY";
+          setTerrainState("READY");
           cleanup.push(
             provider.errorEvent.addEventListener(() => {
               diagnostics.failedRequests++;
+              diagnostics.terrainStatus = "FAILED";
+              setTerrainState("FAILED");
+              setNotice(
+                "Có tile địa hình không tải được hoặc sai checksum. Không dùng vùng thiếu dữ liệu để đánh giá địa hình.",
+              );
               emit();
             }),
           );
         } catch {
+          if (disposed) return;
           diagnostics.terrainStatus = "FAILED";
+          setTerrainState("FAILED");
           setNotice(
             "Không tải được terrain release. Lớp nền hiện tại không thể dùng để đánh giá địa hình.",
           );
@@ -257,6 +321,12 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         );
       if (props.config.roadsUrl) {
         try {
+          v.creditDisplay.addStaticCredit(
+            new Cesium.Credit(
+              '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a> · <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL</a>',
+              true,
+            ),
+          );
           const roads = await Cesium.GeoJsonDataSource.load(
             props.config.roadsUrl,
             {
@@ -269,7 +339,11 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           roadLayer.current = roads;
           roads.show = visibility.current.roads;
           await v.dataSources.add(roads);
+          setRoadsState("READY");
+          if (!disposed) v.scene.requestRender();
         } catch {
+          if (disposed) return;
+          setRoadsState("FAILED");
           diagnostics.failedRequests++;
           setNotice("Không tải được lớp đường.");
         }
@@ -387,67 +461,81 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           roll: 0,
         },
         duration: 1,
-        complete: () => {
-          setSettled(true);
-        },
+        complete: () => v.scene.requestRender(),
       });
     }
   };
   return (
-    <div
-      className="spatial-viewer"
-      data-testid="spatial-viewer"
-      data-ready={ready && !failed ? "true" : "false"}
-      data-settled={settled ? "true" : "false"}
-      data-focused-id={focusedId ?? ""}
-    >
+    <section className="viewer-with-source">
       <div
-        ref={host}
-        className="cesium-host"
-        hidden={failed}
-        aria-label="Bản đồ không gian 3D"
-      />
-      {failed ? (
-        <div className="viewer-fallback" role="status">
-          <h2>Không mở được bản đồ 3D</h2>
-          <p>
-            Thiết bị hoặc trình duyệt chưa hỗ trợ WebGL. Bạn vẫn có thể tìm và
-            đọc thông tin địa điểm bên cạnh.
-          </p>
-        </div>
-      ) : (
-        <>
-          <div className="map-tools" aria-label="Lớp bản đồ">
-            {layers.map((layer) => (
-              <label key={layer.id}>
-                <input
-                  type="checkbox"
-                  checked={visible[layer.id]}
-                  onChange={(event) =>
-                    setVisible((v) => ({
-                      ...v,
-                      [layer.id]: event.target.checked,
-                    }))
-                  }
-                />
-                {layer.label}
-              </label>
-            ))}
-            <button type="button" onClick={() => reset()}>
-              Đặt lại góc nhìn
-            </button>
-            <button type="button" onClick={() => reset(true)}>
-              Nhìn từ trên
-            </button>
+        className="spatial-viewer"
+        data-testid="spatial-viewer"
+        data-ready={ready && !failed ? "true" : "false"}
+        data-settled={settled ? "true" : "false"}
+        data-focused-id={focusedId ?? ""}
+        data-terrain-status={terrainState}
+        data-roads-status={roadsState}
+        data-rendered-width={renderedWidth}
+        data-render-state={renderState}
+      >
+        <div
+          ref={host}
+          className="cesium-host"
+          hidden={failed}
+          aria-label="Bản đồ không gian 3D"
+        />
+        {failed ? (
+          <div className="viewer-fallback" role="status">
+            <h2>Không mở được bản đồ 3D</h2>
+            <p>
+              Thiết bị hoặc trình duyệt chưa hỗ trợ WebGL. Bạn vẫn có thể tìm và
+              đọc thông tin địa điểm bên cạnh.
+            </p>
           </div>
-          {!ready && (
-            <div className="viewer-loading" role="status">
-              Đang khởi tạo Cesium…
+        ) : (
+          <>
+            <div className="map-tools" aria-label="Lớp bản đồ">
+              {layers.map((layer) => (
+                <label key={layer.id}>
+                  <input
+                    type="checkbox"
+                    checked={visible[layer.id]}
+                    onChange={(event) =>
+                      setVisible((v) => ({
+                        ...v,
+                        [layer.id]: event.target.checked,
+                      }))
+                    }
+                  />
+                  {layer.label}
+                </label>
+              ))}
+              <button type="button" onClick={() => reset()}>
+                Đặt lại góc nhìn
+              </button>
+              <button type="button" onClick={() => reset(true)}>
+                Nhìn từ trên
+              </button>
             </div>
-          )}
-          {notice && <p className="map-notice">{notice}</p>}
-        </>
+            {!ready && (
+              <div className="viewer-loading" role="status">
+                Đang khởi tạo Cesium…
+              </div>
+            )}
+            {notice && <p className="map-notice">{notice}</p>}
+          </>
+        )}
+      </div>
+      {terrainDetails && (
+        <details className="terrain-attribution">
+          <summary>Nguồn địa hình · {props.config.terrainRelease}</summary>
+          <p>{terrainDetails}</p>
+          <p>
+            Cao độ xử lý không xác minh thực địa; độ chính xác tại địa điểm:
+            UNKNOWN.
+          </p>
+        </details>
       )}
-    </div>
+    </section>
   );
 }

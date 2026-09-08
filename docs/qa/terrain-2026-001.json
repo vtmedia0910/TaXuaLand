@@ -1,0 +1,56 @@
+{
+  "horizontalRoundTripMaxMeters": 7.062385047625849e-10,
+  "verticalRoundTripMaxMeters": 6.821210263296962e-13,
+  "geoidIndependentComparisonMaxMeters": 4.263256414560601e-14,
+  "noDataCount": 0,
+  "seamErrorMeters": 0,
+  "samples": [
+    {
+      "longitude": 104.35,
+      "latitude": 21.1,
+      "sourceOrthometricMeters": 513.99658203125,
+      "geoidUndulationMeters": -29.582913360595743,
+      "processedEllipsoidMeters": 479.3237913266064,
+      "resamplingDifferenceMeters": -5.08987734404786,
+      "verificationStatus": "UNKNOWN"
+    },
+    {
+      "longitude": 104.45,
+      "latitude": 21.2,
+      "sourceOrthometricMeters": 859.2269287109375,
+      "geoidUndulationMeters": -29.01040130615229,
+      "processedEllipsoidMeters": 825.6131537525412,
+      "resamplingDifferenceMeters": -4.603373652244045,
+      "verificationStatus": "UNKNOWN"
+    },
+    {
+      "longitude": 104.53036202410956,
+      "latitude": 21.26254175667024,
+      "sourceOrthometricMeters": 788.8833794576515,
+      "geoidUndulationMeters": -28.603954956826353,
+      "processedEllipsoidMeters": 751.9605334302616,
+      "resamplingDifferenceMeters": -8.31889107056347,
+      "verificationStatus": "UNKNOWN"
+    },
+    {
+      "longitude": 104.62,
+      "latitude": 21.35,
+      "sourceOrthometricMeters": 1102.627685546875,
+      "geoidUndulationMeters": -28.501003768920903,
+      "processedEllipsoidMeters": 1066.474715277245,
+      "resamplingDifferenceMeters": -7.651966500709129,
+      "verificationStatus": "UNKNOWN"
+    },
+    {
+      "longitude": 104.75,
+      "latitude": 21.5,
+      "sourceOrthometricMeters": 303.29071044921875,
+      "geoidUndulationMeters": -29.401866912841797,
+      "processedEllipsoidMeters": 264.00079114771677,
+      "resamplingDifferenceMeters": -9.888052388660185,
+      "verificationStatus": "UNKNOWN"
+    }
+  ],
+  "fieldControlPoints": "UNKNOWN",
+  "absoluteLocalAccuracy": "UNKNOWN"
+}

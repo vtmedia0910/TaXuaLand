@@ -500,6 +500,15 @@ fieldset {
 .import-rows table {
   min-width: 640px;
 }
+.terrain-attribution {
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  background: #142235;
+  overflow-wrap: anywhere;
+}
+.terrain-attribution p {
+  font-size: 0.8rem;
+}
 .import-rows tr[aria-selected="true"] {
   background: #223e56;
 }

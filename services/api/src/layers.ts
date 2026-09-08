@@ -7,8 +7,9 @@ export async function publicLayers(): Promise<ViewerConfig> {
       kind: string;
       version: string;
       public_url: string;
+      checksum: string;
     }>(
-      `SELECT d.kind,r.version,a.public_url FROM datasets d JOIN dataset_releases r ON r.dataset_id=d.id JOIN dataset_assets a ON a.release_id=r.id JOIN sources s ON s.id=d.source_id WHERE r.qa_status='PUBLISHED' AND a.zone='published' AND a.public_url IS NOT NULL AND s.public_display='ALLOWED' AND s.redistribution='ALLOWED' ORDER BY r.published_at DESC`,
+      `SELECT d.kind,r.version,a.public_url,a.checksum FROM datasets d JOIN dataset_releases r ON r.dataset_id=d.id JOIN dataset_assets a ON a.release_id=r.id JOIN sources s ON s.id=d.source_id WHERE r.qa_status='PUBLISHED' AND a.zone='published' AND a.public_url IS NOT NULL AND s.status='ACTIVE' AND s.archived_at IS NULL AND s.public_display='ALLOWED' AND s.redistribution='ALLOWED' AND s.derivatives='ALLOWED' AND ((d.kind='TERRAIN' AND a.content_type='application/vnd.land.terrain+json') OR (d.kind='ROADS' AND a.content_type='application/geo+json')) ORDER BY r.published_at DESC`,
     )
   ).rows;
   const terrain = rows.find((r) => r.kind === "TERRAIN"),
@@ -31,6 +32,7 @@ export async function publicLayers(): Promise<ViewerConfig> {
     aoi: aoi ?? LAND_VIEWER_BASE.aoi,
     terrainUrl: terrain?.public_url ?? null,
     terrainRelease: terrain?.version ?? null,
+    terrainChecksum: terrain?.checksum ?? null,
     roadsUrl: roads?.public_url ?? null,
     roadsRelease: roads?.version ?? null,
   });

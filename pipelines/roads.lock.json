@@ -1,0 +1,10 @@
+{
+  "filename": "osm-roads-2026-001.json",
+  "url": "https://overpass-api.de/api/interpreter",
+  "query": "[out:json][timeout:40];(way[\"highway\"](21.20,104.45,21.35,104.62);node[\"place\"][\"name\"](21.05,104.30,21.55,104.80););out geom;",
+  "sha256": "094276d313b6814a45db67d47da458c45ea5979929a842aa6c6e9072c2312a67",
+  "bytes": 741406,
+  "sourceTimestamp": "2026-09-07T22:22:01Z",
+  "license": "https://opendatacommons.org/licenses/odbl/1-0/",
+  "attribution": "© OpenStreetMap contributors"
+}

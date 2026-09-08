@@ -129,13 +129,15 @@ export async function publishRelease(actor: Actor, id: string) {
         public_display: string;
         redistribution: string;
         derivatives: string;
+        ready: boolean;
       }>(
-        `SELECT r.id,r.dataset_id,r.qa_status,s.public_display,s.redistribution,s.derivatives FROM dataset_releases r JOIN datasets d ON d.id=r.dataset_id JOIN sources s ON s.id=d.source_id WHERE r.id=$1 FOR UPDATE OF r`,
+        `SELECT r.id,r.dataset_id,r.qa_status,s.public_display,s.redistribution,s.derivatives,(s.status='ACTIVE' AND s.archived_at IS NULL AND r.bbox IS NOT NULL AND r.target_crs='EPSG:4326' AND (d.kind<>'TERRAIN' OR (r.vertical_datum='WGS84_ELLIPSOID' AND r.resolution IS NOT NULL)) AND EXISTS(SELECT 1 FROM dataset_assets a WHERE a.release_id=r.id AND a.zone='published' AND a.public_url IS NOT NULL AND a.checksum=r.checksum) AND EXISTS(SELECT 1 FROM pipeline_runs p WHERE p.release_id=r.id AND p.status='COMPLETED')) AS ready FROM dataset_releases r JOIN datasets d ON d.id=r.dataset_id JOIN sources s ON s.id=d.source_id WHERE r.id=$1 FOR UPDATE OF r`,
         [id],
       )
     ).rows[0];
     if (
       !release ||
+      !release.ready ||
       release.qa_status !== "APPROVED" ||
       release.public_display !== "ALLOWED" ||
       release.redistribution !== "ALLOWED" ||
