@@ -18,4 +18,14 @@ Validation on 2026-09-08: Node 24.13.0, pnpm 11.19.0, frozen dependency install 
 
 Needed for local integration/Core E2E: a dedicated loopback PostgreSQL maintenance connection to database postgres, with PostGIS available and a QA owner able to create disposable databases and roles. Supply DATABASE_TEST_URL through the private process environment or ignored repo-root .env.local. Do not use staging or another product's database, and do not send the credential in a commit. Managed staging credentials are not needed for these local tests.
 
-Owner checkpoint: review B, commit/push through the host Git workflow, then authorize continuation to C. C–J and actual staging acceptance remain pending. Phase 1 has not started.
+Owner reported checkpoint B pushed in PR #2, with GitHub check and e2e-core PASS, and authorized C on the existing feature branch. These results apply to B, not unpushed C changes.
+
+## C — Object storage abstraction
+
+Added typed ObjectStore/ObjectStoreSigner contracts, application-generated raw/inspection/spatial/diagnostic keys and strict namespace, MIME, size and SHA-256 validation. Added LocalFilesystemObjectStore with atomic exclusive publication and S3CompatibleObjectStore with configured separate buckets, conditional PUT, bounded download/readback integrity verification, safe errors and bounded signed URLs. Published release objects cannot be overwritten or deleted through these adapters; diagnostic cleanup remains available. SDK dependencies are pinned to @aws-sdk/client-s3 and @aws-sdk/s3-request-presigner 3.1127.0 inside the server infrastructure adapter. No domain/schema, spatial semantics, verification or existing import route changes.
+
+Validation on 2026-09-08: 28 storage contract/security tests PASS with real filesystem I/O and SDK requests to a local HTTP S3 fixture. Full pnpm check exited 0: lint/typecheck, 92 tests, production build, 63 emitted client syntax checks, secret scan of 250 repository files and 207 public artifacts PASS. 17 PostGIS tests skipped because DATABASE_TEST_URL is absent. Actual pnpm test:e2e:core again stopped at the loopback maintenance-connection precondition. GitHub checks for C require the owner's next push. The HTTP fixture is not a real provider/IAM/signature verification service; provider policy, cryptographic rejection, privacy, CORS, lifecycle and deployed persistence remain unverified until staging.
+
+See object-storage.md for adapter contracts, local backing format, retry/conflict handling, checksum trust boundary, operator requirements and deferred acceptance. D will connect authenticated upload sessions/finalize and retention to these adapters, preserving legacy inspection compatibility. E will connect publication and approved public URL resolution. No credentials are required to complete C; staging provider credentials remain an H dependency.
+
+Owner checkpoint: review C and commit/push through host Git, then authorize D. Codex performed no Git writes. D–J and actual staging acceptance remain pending. Phase 1 has not started.
