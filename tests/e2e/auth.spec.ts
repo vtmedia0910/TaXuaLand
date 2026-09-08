@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 test("admin login, protected page and logout", async ({ page }) => {
+  test.setTimeout(120000);
+  const clientErrors: string[] = [];
+  page.on("pageerror", (error) => clientErrors.push(error.message));
   const credentials = JSON.parse(
     readFileSync(
       process.env.E2E_CREDENTIALS_FILE ?? "work/local-admin.json",
@@ -14,7 +17,7 @@ test("admin login, protected page and logout", async ({ page }) => {
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Dữ liệu không gian" }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 30000 });
   await page.screenshot({
     path: "work/qa-admin-auth-desktop.png",
     fullPage: true,
@@ -34,7 +37,32 @@ test("admin login, protected page and logout", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Chẩn đoán hệ thống" }),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Kiểm tra viewer", exact: true })
+    .click();
+  await expect(page.getByTestId("stable-frame-ms")).toHaveText(/^\d+$/, {
+    timeout: 60000,
+  });
+  await expect(page.getByTestId("viewer-diagnostics")).toContainText(
+    "TX-DEM-2026-001",
+  );
   await page.screenshot({ path: "work/qa-diagnostics.png", fullPage: true });
+  const diagnosticResponse = await page.evaluate(async () => {
+    const response = await fetch("/api/admin/diagnostics");
+    return { status: response.status, body: await response.text() };
+  });
+  expect(diagnosticResponse.status).toBe(200);
+  expect(diagnosticResponse.body).not.toMatch(
+    /storage_key|raw_data_json|password_hash|DATABASE_URL/,
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: "work/qa-diagnostics-mobile.png",
+    fullPage: true,
+  });
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
   await page.getByRole("button", { name: "Đăng xuất" }).click();
   await expect(page).toHaveURL(/\/admin\/login$/);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -43,4 +71,5 @@ test("admin login, protected page and logout", async ({ page }) => {
     fullPage: true,
   });
   expect((await page.request.get("/api/admin/session")).status()).toBe(401);
+  expect(clientErrors).toEqual([]);
 });

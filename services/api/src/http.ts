@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { AppError } from "./errors";
+import { errorCategory, safeRoute } from "./observability";
 import {
   SESSION_COOKIE,
   sessionActor,
@@ -65,6 +66,7 @@ export async function handle(
   const correlationId = randomUUID(),
     start = performance.now();
   let status = 500;
+  let category: string | null = null;
   try {
     const response = await action(correlationId);
     status = response.status;
@@ -72,6 +74,7 @@ export async function handle(
     response.headers.set("Cache-Control", "no-store");
     return response;
   } catch (error) {
+    category = errorCategory(error);
     const safe =
       error instanceof AppError
         ? error
@@ -98,8 +101,9 @@ export async function handle(
       JSON.stringify({
         event: "http_request",
         method: request.method,
-        path: new URL(request.url).pathname,
+        path: safeRoute(request.url),
         status,
+        errorCategory: category,
         durationMs: Math.round(performance.now() - start),
         correlationId,
       }),

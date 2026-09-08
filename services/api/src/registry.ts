@@ -3,6 +3,7 @@ import { database, transaction } from "./db";
 import { audit, requirePermission, type Actor } from "./auth";
 import { SourceSchema } from "../../../packages/provenance/src/index";
 import { AppError } from "./errors";
+import { importDiagnostics } from "./import-diagnostics";
 export async function listSources(actor: Actor) {
   requirePermission(actor, "read");
   const result = await database().query(
@@ -43,7 +44,10 @@ export async function registerSource(actor: Actor, input: unknown) {
     return s;
   });
 }
-const Release = z
+const DatabaseTimestamp = z.iso
+  .datetime({ offset: true })
+  .transform((value) => new Date(value).toISOString());
+export const DatasetReleaseDiagnostic = z
   .object({
     id: z.uuid(),
     version: z.string(),
@@ -56,8 +60,8 @@ const Release = z
     license: z.string(),
     checksum: z.string(),
     qaStatus: z.string(),
-    generatedAt: z.iso.datetime(),
-    publishedAt: z.iso.datetime().nullable(),
+    generatedAt: DatabaseTimestamp,
+    publishedAt: DatabaseTimestamp.nullable(),
   })
   .strip();
 const Dataset = z
@@ -67,7 +71,7 @@ const Dataset = z
     name: z.string(),
     kind: z.string(),
     sourceName: z.string(),
-    releases: z.array(Release),
+    releases: z.array(DatasetReleaseDiagnostic),
   })
   .strip();
 export async function listDatasets(actor: Actor) {
@@ -115,6 +119,7 @@ export async function diagnostics(actor: Actor) {
       .parse(JSON.parse(JSON.stringify(providers))),
     sources: await listSources(actor),
     datasets: await listDatasets(actor),
+    imports: await importDiagnostics(actor),
   };
 }
 export async function publishRelease(actor: Actor, id: string) {

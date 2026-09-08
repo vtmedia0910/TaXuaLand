@@ -48,4 +48,8 @@ export interface ViewerDiagnostics {
   failedRequests: number;
   initializationMs: number | null;
   firstFrameMs: number | null;
+  firstStableFrameMs: number | null;
+  roadsStatus: "UNCONFIGURED" | "READY" | "FAILED";
+  clientErrors: number;
+  placeLayerMs: number | null;
 }

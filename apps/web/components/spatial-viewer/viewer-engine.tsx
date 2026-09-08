@@ -26,6 +26,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     roadLayer = useRef<Cesium.DataSource | null>(null),
     terrain = useRef<Cesium.TerrainProvider | null>(null),
     callbacks = useRef(props);
+  const telemetry = useRef<ViewerDiagnostics | null>(null);
   const [ready, setReady] = useState(false),
     [generation, setGeneration] = useState(0),
     [settled, setSettled] = useState(false),
@@ -68,7 +69,12 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       failedRequests: 0,
       initializationMs: null,
       firstFrameMs: null,
+      firstStableFrameMs: null,
+      roadsStatus: "UNCONFIGURED",
+      clientErrors: 0,
+      placeLayerMs: null,
     };
+    telemetry.current = diagnostics;
     const emit = () => callbacks.current.onDiagnostics?.({ ...diagnostics });
     async function initialize() {
       if (!host.current || props.forceFallback)
@@ -232,15 +238,26 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           !cameraMoving &&
           v.scene.globe.tilesLoaded &&
           v.dataSourceDisplay.ready &&
-          (!props.config.terrainUrl || diagnostics.terrainStatus === "READY")
+          (!props.config.terrainUrl || diagnostics.terrainStatus === "READY") &&
+          (!props.config.roadsUrl || diagnostics.roadsStatus === "READY")
         ) {
           stableFrames++;
           setSettled(stableFrames >= 2);
+          if (stableFrames >= 2 && diagnostics.firstStableFrameMs === null) {
+            diagnostics.firstStableFrameMs = Math.round(
+              performance.now() - start,
+            );
+            emit();
+          }
           if (stableFrames === 1) v.scene.requestRender();
         } else {
           stableFrames = 0;
           setSettled(false);
-          if (diagnostics.terrainStatus !== "FAILED") v.scene.requestRender();
+          if (
+            diagnostics.terrainStatus !== "FAILED" &&
+            diagnostics.roadsStatus !== "FAILED"
+          )
+            v.scene.requestRender();
         }
         if (diagnostics.firstFrameMs === null) {
           diagnostics.firstFrameMs = Math.round(performance.now() - start);
@@ -250,7 +267,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       cleanup.push(first);
       cleanup.push(
         v.scene.renderError.addEventListener(() => {
-          diagnostics.failedRequests++;
+          diagnostics.clientErrors++;
           emit();
           setFailed(true);
         }),
@@ -310,6 +327,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         } catch {
           if (disposed) return;
           diagnostics.terrainStatus = "FAILED";
+          diagnostics.failedRequests++;
           setTerrainState("FAILED");
           setNotice(
             "Không tải được terrain release. Lớp nền hiện tại không thể dùng để đánh giá địa hình.",
@@ -340,10 +358,12 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           roads.show = visibility.current.roads;
           await v.dataSources.add(roads);
           setRoadsState("READY");
+          diagnostics.roadsStatus = "READY";
           if (!disposed) v.scene.requestRender();
         } catch {
           if (disposed) return;
           setRoadsState("FAILED");
+          diagnostics.roadsStatus = "FAILED";
           diagnostics.failedRequests++;
           setNotice("Không tải được lớp đường.");
         }
@@ -353,6 +373,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     }
     initialize().catch(() => {
       if (!disposed) {
+        diagnostics.clientErrors++;
         setFailed(true);
         emit();
       }
@@ -372,6 +393,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     const v = viewer.current,
       ds = placeLayer.current;
     if (!ready || !v || !ds || v.isDestroyed()) return;
+    const layerStart = performance.now();
     ds.entities.removeAll();
     for (const p of props.points ?? []) {
       const selected = p.id === props.selectedId;
@@ -404,6 +426,12 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       });
     }
     v.scene.requestRender();
+    if (telemetry.current) {
+      telemetry.current.placeLayerMs = Math.round(
+        performance.now() - layerStart,
+      );
+      callbacks.current.onDiagnostics?.({ ...telemetry.current });
+    }
   }, [ready, generation, props.points, props.selectedId]);
   useEffect(() => {
     const v = viewer.current;
