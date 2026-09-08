@@ -1,5 +1,7 @@
 # Environment and deployment
 
+Phase 0.5-E: apply migration 014 and follow [spatial object publication](spatial-object-publication.md) before enabling S3 spatial delivery. The application resolves only a configured HTTPS asset origin and matching PostGIS delivery receipt. In S3 mode it never falls back to `apps/web/public/spatial`; that directory remains LOCAL QA only. Real cloud redeploy/CORS acceptance is still pending.
+
 Phase 0.5-D connects the Next.js service to private durable object storage for imports. LOCAL retains a private filesystem adapter; STAGING/PRODUCTION use S3-compatible storage and temporary parsing scratch only. The isolated XLSX child still requires readable monorepo parser files/dependencies. Actual Vercel compatibility and cold deployment acceptance are pending, not established by local tests. No cloud deployment is claimed by this checkpoint.
 
 ## Install and bootstrap

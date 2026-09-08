@@ -1,5 +1,7 @@
 # Known limitations and Phase 1 handoff
 
+Phase 0.5-E implements immutable spatial object delivery and approved CDN URL resolution, with PostGIS authority unchanged. Local tests establish checksum/gate/retry behavior and object persistence independent of the pipeline input directory. Actual provider public access/CORS/cache headers, sample Cesium CDN loads and web redeploy persistence remain unverified without staging credentials. No Phase 0.5 staging PASS is asserted.
+
 Phase 0 is a validated local release candidate and repository deliverable. It does not assert that a public production deployment, managed database, TLS/domain, storage/CDN account, legal review or field survey has occurred.
 
 - DEM covers a representative bounded AOI/camera buffer, not the entire region. Source DSM includes vegetation/structures; 60 m normalization and finite LOD do not create survey detail. EGM2008-to-ellipsoid conversion is explicit and checked, but local absolute accuracy/control points remain UNKNOWN. Official administrative/cadastral boundary remains UNKNOWN.

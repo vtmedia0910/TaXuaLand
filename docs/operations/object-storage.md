@@ -1,5 +1,7 @@
 # Object storage — Phase 0.5-C/D
 
+Phase 0.5-E spatial integration is now described in [spatial object publication](spatial-object-publication.md): immutable operator upload/readback, separate PostGIS delivery receipts and approved public URL resolution. Statements below about E being deferred describe the earlier C/D checkpoint; the new guide supersedes those deferrals. Real provider/CDN acceptance remains pending.
+
 The server-side adapters live in services/api/src/storage. No browser module imports them. Durable import uses the private adapter. Public spatial integration remains milestone E, outside this checkpoint. The contract notes below describe the C baseline; the D operational flow and migration instructions follow in the final section.
 
 ## Contracts and boundaries

@@ -4,6 +4,7 @@ import { audit, requirePermission, type Actor } from "./auth";
 import { SourceSchema } from "../../../packages/provenance/src/index";
 import { AppError } from "./errors";
 import { importDiagnostics } from "./import-diagnostics";
+import { publishedBase } from "./published-assets";
 export async function listSources(actor: Actor) {
   requirePermission(actor, "read");
   const result = await database().query(
@@ -122,9 +123,15 @@ export async function diagnostics(actor: Actor) {
     imports: await importDiagnostics(actor),
   };
 }
-export async function publishRelease(actor: Actor, id: string) {
+export async function publishRelease(
+  actor: Actor,
+  id: string,
+  connection = database(),
+  env: Record<string, string | undefined> = process.env,
+) {
   requirePermission(actor, "configure");
   z.uuid().parse(id);
+  const base = publishedBase(env);
   return transaction(async (client) => {
     const release = (
       await client.query<{
@@ -140,6 +147,29 @@ export async function publishRelease(actor: Actor, id: string) {
         [id],
       )
     ).rows[0];
+    if (
+      base &&
+      !(
+        await client.query(
+          "SELECT release_id FROM spatial_object_deliveries WHERE release_id=$1 AND public_base_url=$2",
+          [id, base],
+        )
+      ).rowCount
+    )
+      throw new AppError(
+        "RELEASE_DELIVERY_REQUIRED",
+        409,
+        "Release cần được kiểm tra object delivery trước khi publish.",
+      );
+    if (
+      !(
+        await client.query(
+          "SELECT s.id FROM sources s JOIN datasets d ON d.source_id=s.id JOIN dataset_releases r ON r.dataset_id=d.id WHERE r.id=$1 AND (s.provider_id IS NULL OR EXISTS(SELECT 1 FROM integration_providers p WHERE p.id=s.provider_id AND p.enabled AND NOT p.kill_switch))",
+          [id],
+        )
+      ).rowCount
+    )
+      throw new AppError("RELEASE_GATE", 409, "Provider không khả dụng.");
     if (
       !release ||
       !release.ready ||
@@ -171,5 +201,5 @@ export async function publishRelease(actor: Actor, id: string) {
       "DATASET_RELEASE",
       id,
     );
-  });
+  }, connection);
 }
