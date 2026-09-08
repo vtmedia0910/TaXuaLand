@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/browser";
 import { randomBytes, randomUUID, createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import pg from "pg";
@@ -119,7 +119,8 @@ test("runtime role cannot change credentials or erase audit, and upload boundari
   test.setTimeout(60000);
   const role = (
     await pool.query(
-      "SELECT rolsuper,rolcreatedb,rolcreaterole FROM pg_roles WHERE rolname='land_app'",
+      "SELECT rolsuper,rolcreatedb,rolcreaterole FROM pg_roles WHERE rolname=$1",
+      [process.env.E2E_RUNTIME_ROLE ?? "land_app"],
     )
   ).rows[0];
   expect(role).toEqual({
@@ -129,12 +130,16 @@ test("runtime role cannot change credentials or erase audit, and upload boundari
   });
   const grants = (
     await pool.query(
-      "SELECT has_table_privilege('land_app','admin_users','UPDATE') AS credentials,has_table_privilege('land_app','audit_events','DELETE') AS audit,has_table_privilege('land_app','areas_of_interest','UPDATE') AS aoi",
+      "SELECT has_table_privilege($1,'admin_users','UPDATE') AS credentials,has_table_privilege($1,'audit_events','DELETE') AS audit,has_table_privilege($1,'areas_of_interest','UPDATE') AS aoi",
+      [process.env.E2E_RUNTIME_ROLE ?? "land_app"],
     )
   ).rows[0];
   expect(grants).toEqual({ credentials: false, audit: false, aoi: false });
   const credentials = JSON.parse(
-    await readFile("work/local-admin.json", "utf8"),
+    await readFile(
+      process.env.E2E_CREDENTIALS_FILE ?? "work/local-admin.json",
+      "utf8",
+    ),
   );
   await page.goto("/admin/login");
   await page.getByLabel("Email").fill(credentials.email);
@@ -164,7 +169,10 @@ test("runtime role cannot change credentials or erase audit, and upload boundari
   );
   expect(status).toBe(413);
   const crossOrigin = await page.request.post("/api/admin/places", {
-    headers: { Origin: "https://attacker.invalid" },
+    headers: {
+      Origin: "https://attacker.invalid",
+      Cookie: `land_session=${cookies.find((cookie) => cookie.name === "land_session")!.value}`,
+    },
     data: {},
   });
   expect(crossOrigin.status()).toBe(403);

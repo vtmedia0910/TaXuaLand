@@ -20,3 +20,5 @@ Phase 0 repository/local release-candidate acceptance is complete; see [mileston
 - [Acceptance evidence](docs/operations/acceptance.md), [known limitations and Phase 1 handoff](docs/operations/known-limitations.md)
 
 GIS binaries and private QA artifacts are excluded from Git. Rebuild/publish the sample releases with the pipeline before terrain E2E. Unit/integration tests use disposable PostGIS databases; set `DATABASE_TEST_URL` to run them locally. CI supplies its own isolated PostGIS service and performs a frozen install, all checks, client syntax validation and secret scan. Browser E2E uses the local production server and authored fixtures; never point it at a public production database.
+
+Deterministic browser checks: after the production build, run `pnpm test:e2e:core`. The [Core E2E harness](docs/operations/core-e2e.md) creates and destroys a separate QA database/runtime, with no GIS downloads or production secrets. GitHub's `e2e-core` job runs the same nine browser scenarios. The [architecture freeze](docs/operations/phase-0-architecture-freeze.md) governs future changes.

@@ -2,8 +2,12 @@ name: Phase 0 checks
 on: [push, pull_request]
 permissions:
   contents: read
+concurrency:
+  group: phase-0-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   check:
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     services:
       postgis:
@@ -26,3 +30,40 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+  e2e-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgis:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_PASSWORD: ci-only-disposable
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_TEST_URL: postgresql://postgres:ci-only-disposable@localhost:5432/postgres
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node node_modules/@playwright/test/cli.js install --with-deps chromium
+      - run: pnpm build
+      - name: Production Core E2E against disposable LAND PostGIS
+        run: pnpm test:e2e:core
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: core-e2e-safe-summary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            test-results/core-safe/summary.json
+            test-results/core-safe/summary.html
+          if-no-files-found: ignore
+          retention-days: 7

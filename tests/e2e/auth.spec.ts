@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../support/browser";
 test("admin login, protected page and logout", async ({ page }) => {
   test.setTimeout(120000);
   const clientErrors: string[] = [];
@@ -43,9 +43,10 @@ test("admin login, protected page and logout", async ({ page }) => {
   await expect(page.getByTestId("stable-frame-ms")).toHaveText(/^\d+$/, {
     timeout: 60000,
   });
-  await expect(page.getByTestId("viewer-diagnostics")).toContainText(
-    "TX-DEM-2026-001",
-  );
+  if (!process.env.E2E_CORE)
+    await expect(page.getByTestId("viewer-diagnostics")).toContainText(
+      "TX-DEM-2026-001",
+    );
   await page.screenshot({ path: "work/qa-diagnostics.png", fullPage: true });
   const diagnosticResponse = await page.evaluate(async () => {
     const response = await fetch("/api/admin/diagnostics");
@@ -63,6 +64,10 @@ test("admin login, protected page and logout", async ({ page }) => {
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(390);
+  const previousSession = (await page.context().cookies()).find(
+    (cookie) => cookie.name === "land_session",
+  )?.value;
+  expect(Boolean(previousSession)).toBe(true);
   await page.getByRole("button", { name: "Đăng xuất" }).click();
   await expect(page).toHaveURL(/\/admin\/login$/);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -71,5 +76,14 @@ test("admin login, protected page and logout", async ({ page }) => {
     fullPage: true,
   });
   expect((await page.request.get("/api/admin/session")).status()).toBe(401);
+  expect(
+    (
+      await page.request.get("/api/admin/session", {
+        headers: { Cookie: `land_session=${previousSession}` },
+      })
+    ).status(),
+  ).toBe(401);
+  await page.goto("/admin");
+  await expect(page).toHaveURL(/\/admin\/login$/);
   expect(clientErrors).toEqual([]);
 });
