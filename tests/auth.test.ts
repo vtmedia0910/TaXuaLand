@@ -6,6 +6,24 @@ import {
   requirePermission,
 } from "../services/api/src/auth";
 import { checkOrigin, jsonInput } from "../services/api/src/http";
+import { RuntimeEnvironment } from "../packages/config/src/runtime";
+it("runtime accepts loopback QA but requires HTTPS and rejects URL credentials for remote origins", () => {
+  const base = {
+    DATABASE_URL: "postgresql://user:placeholder@localhost/land",
+    SERVER_ORIGIN: "http://127.0.0.1:3000",
+    LAND_WORKSPACE_ROOT: "/land",
+  };
+  expect(RuntimeEnvironment.safeParse(base).success).toBe(true);
+  for (const origin of [
+    "http://land.example",
+    "https://user:secret@land.example",
+    "https://land.example/path",
+    "https://land.example?token=test",
+  ])
+    expect(
+      RuntimeEnvironment.safeParse({ ...base, SERVER_ORIGIN: origin }).success,
+    ).toBe(false);
+});
 it("hashes passwords with a random salt and rejects wrong credentials", async () => {
   const hash = await hashPassword("QA-only-long-password");
   expect(hash).not.toContain("QA-only");

@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
-    "start": "next start",
+    "start": "node ../../infra/start-web.mjs",
     "typecheck": "tsc --noEmit",
     "predev": "node ../../infra/copy-cesium.mjs",
     "prebuild": "node ../../infra/copy-cesium.mjs"

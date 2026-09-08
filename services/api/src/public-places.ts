@@ -14,7 +14,7 @@ import { AppError } from "./errors";
 const iso = (column: string) =>
   `to_char(${column} AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
 const allowed = (source: string, record: string) =>
-  `${source}.public_display='ALLOWED' AND ${source}.status='ACTIVE' AND ${source}.archived_at IS NULL AND ${record}.archived_at IS NULL`;
+  `${source}.public_display='ALLOWED' AND ${source}.status='ACTIVE' AND ${source}.archived_at IS NULL AND ${record}.archived_at IS NULL AND (${source}.provider_id IS NULL OR EXISTS(SELECT 1 FROM integration_providers provider WHERE provider.id=${source}.provider_id AND provider.enabled AND NOT provider.kill_switch))`;
 const effective = (row: string) =>
   `CASE WHEN ${row}.verification_status<>'UNKNOWN' AND ${row}.expires_at<=now() THEN 'EXPIRED'::verification_status ELSE ${row}.verification_status END`;
 const trust = (

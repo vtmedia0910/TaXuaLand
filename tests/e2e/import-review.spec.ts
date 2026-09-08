@@ -125,15 +125,24 @@ test("workbook upload, mapping, map preview and explicit row review", async ({
     .getByRole("link", { name: "Mở bản nháp" })
     .getAttribute("href");
   const placeId = placePath!.split("/").at(-1)!;
-  const placeResponse = await page.request.get(`/api/admin/places/${placeId}`);
-  expect(placeResponse.ok()).toBe(true);
-  const place = await placeResponse.json();
+  const place = await page.evaluate(async (id) => {
+    const response = await fetch(`/api/admin/places/${id}`);
+    if (!response.ok) throw Error(`Read draft ${response.status}`);
+    return response.json();
+  }, placeId);
   expect(place.place.publication_status).toBe("DRAFT");
   expect(place.geometry.verification_status).toBe("UNKNOWN");
-  const cleanup = await page.request.delete(`/api/admin/places/${placeId}`, {
-    headers: { Origin: "http://127.0.0.1:3000" },
-    data: { version: place.place.version },
-  });
-  expect(cleanup.ok()).toBe(true);
+  const cleanup = await page.evaluate(
+    async ({ id, version }) =>
+      (
+        await fetch(`/api/admin/places/${id}`, {
+          method: "DELETE",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ version }),
+        })
+      ).status,
+    { id: placeId, version: place.place.version },
+  );
+  expect(cleanup).toBe(200);
   expect(errors).toEqual([]);
 });

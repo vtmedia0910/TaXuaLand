@@ -4,6 +4,7 @@ type PgClient = InstanceType<typeof pg.Client>;
 type PgPool = InstanceType<typeof pg.Pool>;
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { migrate } from "../infra/migrate";
+import { publicLayers } from "../services/api/src/layers";
 import {
   hashPassword,
   login,
@@ -162,7 +163,7 @@ describe.skipIf(!connection)("real PostgreSQL/PostGIS integration", () => {
   it("published release checksums and public asset URLs cannot be rewritten or moved", async () => {
     const source = (
       await pool.query(
-        "INSERT INTO sources(name,category) VALUES('Synthetic terrain','TERRAIN') RETURNING id",
+        "INSERT INTO sources(name,category,status,public_display,redistribution,derivatives) VALUES('Synthetic terrain','TERRAIN','ACTIVE','ALLOWED','ALLOWED','ALLOWED') RETURNING id",
       )
     ).rows[0].id;
     const dataset = (
@@ -179,7 +180,7 @@ describe.skipIf(!connection)("real PostgreSQL/PostGIS integration", () => {
     ).rows[0].id;
     const asset = (
       await pool.query(
-        "INSERT INTO dataset_assets(release_id,zone,object_key,checksum,byte_size,content_type,public_url) VALUES($1,'published','test-1/manifest.json',repeat('a',64),10,'application/json','/spatial/test-1/manifest.json') RETURNING id",
+        "INSERT INTO dataset_assets(release_id,zone,object_key,checksum,byte_size,content_type,public_url) VALUES($1,'published','test-1/manifest.json',repeat('a',64),10,'application/vnd.land.terrain+json','/spatial/test-1/manifest.json') RETURNING id",
         [release],
       )
     ).rows[0].id;
@@ -187,6 +188,24 @@ describe.skipIf(!connection)("real PostgreSQL/PostGIS integration", () => {
       "UPDATE dataset_releases SET qa_status='PUBLISHED',published_at=now() WHERE id=$1",
       [release],
     );
+    expect((await publicLayers(pool)).terrainRelease).toBe("test-1");
+    await pool.query(
+      "INSERT INTO integration_providers(id,type,enabled,kill_switch) VALUES('terrain_gate','TERRAIN',true,true)",
+    );
+    await pool.query(
+      "UPDATE sources SET provider_id='terrain_gate' WHERE id=$1",
+      [source],
+    );
+    expect((await publicLayers(pool)).terrainRelease).toBeNull();
+    await pool.query(
+      "UPDATE integration_providers SET kill_switch=false WHERE id='terrain_gate'",
+    );
+    expect((await publicLayers(pool)).terrainRelease).toBe("test-1");
+    await pool.query(
+      "UPDATE sources SET redistribution='UNKNOWN' WHERE id=$1",
+      [source],
+    );
+    expect((await publicLayers(pool)).terrainRelease).toBeNull();
     await expect(
       pool.query(
         "UPDATE dataset_releases SET checksum=repeat('b',64) WHERE id=$1",

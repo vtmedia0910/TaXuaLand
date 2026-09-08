@@ -101,9 +101,10 @@ test("Admin creates and corrects map location, preserves history, reviews and pu
   await expect(
     page.getByText("DRAFT · Phiên bản 2", { exact: true }),
   ).toBeVisible({ timeout: 15000 });
-  const record = await (
-    await page.request.get(`/api/admin/places/${id}`)
-  ).json();
+  const record = await page.evaluate(
+    async (id) => (await fetch(`/api/admin/places/${id}`)).json(),
+    id,
+  );
   expect(record.geometryHistory).toHaveLength(2);
   expect(record.geometry.verification_status).toBe("UNKNOWN");
   await page.getByLabel(/Tôi đã rà soát nội dung, nguồn/).check();

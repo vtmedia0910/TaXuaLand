@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit && pnpm --filter @land/web typecheck",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
-    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm security:scan",
+    "security:scan": "node infra/scan-secrets.mjs",
     "format": "prettier --write .",
     "db:migrate": "node --env-file=.env.local infra/migrate.ts",
     "test:e2e": "playwright test"

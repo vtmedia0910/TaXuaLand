@@ -369,6 +369,8 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         }
       }
       emit();
+      // Rebuild/focus after real providers replace the initial ellipsoid.
+      setGeneration((value) => value + 1);
       v.scene.requestRender();
     }
     initialize().catch(() => {
@@ -438,27 +440,32 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     if (!ready || !v || v.isDestroyed()) return;
     if (callbacks.current.picker && !props.focusRequest) return;
     const p = callbacks.current.points?.find((p) => p.id === props.selectedId);
-    if (p)
-      v.camera.flyToBoundingSphere(
-        new Cesium.BoundingSphere(
-          Cesium.Cartesian3.fromDegrees(
-            p.location.longitude,
-            p.location.latitude,
-          ),
-        ),
-        {
+    const entity = p && placeLayer.current?.entities.getById(p.id);
+    let cancelled = false;
+    if (p && entity) {
+      setFocusedId(null);
+      // Entity bounding sphere uses the rendered terrain-clamped position.
+      // A zero-height geographic target would focus below a mountain marker.
+      void v
+        .flyTo(entity, {
           offset: new Cesium.HeadingPitchRange(
             0,
             Cesium.Math.toRadians(-70),
             3500,
           ),
           duration: 1,
-          complete: () => {
+        })
+        .then((completed) => {
+          if (!cancelled && completed && !v.isDestroyed()) {
             setFocusedId(p.id);
             v.scene.requestRender();
-          },
-        },
-      );
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      cancelled = true;
+    };
   }, [ready, generation, props.selectedId, props.focusRequest]);
   useEffect(() => {
     const v = viewer.current;

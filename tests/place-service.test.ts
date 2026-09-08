@@ -258,7 +258,10 @@ describe.skipIf(!connection)("place application service with PostGIS", () => {
     ).rejects.toThrow("quyền");
   });
   it("public projection fails closed for drafts and source rights and preserves per-section trust", async () => {
-    await pool.query("UPDATE sources SET public_display='UNKNOWN' WHERE id=$1",[sourceId]);
+    await pool.query(
+      "UPDATE sources SET public_display='UNKNOWN' WHERE id=$1",
+      [sourceId],
+    );
     const data = PlaceInput.parse({
       name: "Đỉnh thử công khai",
       slug: "dinh-thu-cong-khai",
@@ -319,6 +322,25 @@ describe.skipIf(!connection)("place application service with PostGIS", () => {
       (await publicPlaces({ category: "DOES_NOT_EXIST" }, pool)).items,
     ).toHaveLength(0);
     expect((await publicPlaces({ query: "%" }, pool)).items).toHaveLength(0);
+    await pool.query(
+      "INSERT INTO integration_providers(id,type,enabled) VALUES('test_provider','STORAGE',true)",
+    );
+    await pool.query(
+      "UPDATE sources SET provider_id='test_provider' WHERE id=$1",
+      [sourceId],
+    );
+    expect((await publicPlace(data.slug, pool)).id).toBe(id);
+    await pool.query(
+      "UPDATE integration_providers SET kill_switch=true WHERE id='test_provider'",
+    );
+    expect((await publicPlaces({}, pool)).items).toHaveLength(0);
+    await pool.query(
+      "UPDATE integration_providers SET kill_switch=false,enabled=false WHERE id='test_provider'",
+    );
+    await expect(publicPlace(data.slug, pool)).rejects.toThrow("công khai");
+    await pool.query(
+      "UPDATE integration_providers SET enabled=true WHERE id='test_provider'",
+    );
     await pool.query("UPDATE sources SET status='DISABLED' WHERE id=$1", [
       sourceId,
     ]);
