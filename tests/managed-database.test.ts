@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { databaseOptions } from "../packages/config/src/database";
@@ -64,6 +64,7 @@ describe.skipIf(!connection)(
   () => {
     const name = `land_test_${randomUUID().replaceAll("-", "")}`;
     const role = `${name}_app`;
+    const password = randomBytes(32).toString("hex");
     let owner: InstanceType<typeof pg.Client>;
     let pool: InstanceType<typeof pg.Pool>;
     let runtime: InstanceType<typeof pg.Pool>;
@@ -83,7 +84,7 @@ describe.skipIf(!connection)(
       await pool.query("DROP TABLE unrelated_product");
       await migrate(pool);
       await owner.query(
-        `CREATE ROLE "${role}" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`,
+        `CREATE ROLE "${role}" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT PASSWORD ${pg.escapeLiteral(password)}`,
       );
       await pool.query(`GRANT USAGE ON SCHEMA public TO "${role}"`);
       await pool.query(
@@ -93,16 +94,18 @@ describe.skipIf(!connection)(
         `GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO "${role}"`,
       );
       url.username = role;
-      url.password = "";
+      url.password = password;
       runtime = new pg.Pool(databaseOptions({ DATABASE_URL: url.toString() }));
     }, 30000);
     afterAll(async () => {
-      await runtime?.end();
-      await pool?.end();
-      if (owner) {
-        await owner.query(`DROP DATABASE IF EXISTS "${name}"`);
-        await owner.query(`DROP ROLE IF EXISTS "${role}"`);
-        await owner.end();
+      try {
+        await Promise.all([runtime?.end(), pool?.end()]);
+        if (owner) {
+          await owner.query(`DROP DATABASE IF EXISTS "${name}"`);
+          await owner.query(`DROP ROLE IF EXISTS "${role}"`);
+        }
+      } finally {
+        await owner?.end();
       }
     });
     it("accepts read-only runtime, rejects owner and publication receipt write authority", async () => {
@@ -130,10 +133,10 @@ describe.skipIf(!connection)(
               )
             ).rows[0];
             expect(row.srid).toBe(4326);
-            await client.query("ROLLBACK");
             return row.pid;
           } finally {
-            client.release();
+            // Never return a failed test's open transaction/advisory lock to the pool.
+            await client.query("ROLLBACK").finally(() => client.release());
           }
         }),
       );
