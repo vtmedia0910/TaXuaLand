@@ -2,6 +2,7 @@ import pg from "pg";
 import type { PoolClient as PgPoolClient } from "pg";
 type PgPool = InstanceType<typeof pg.Pool>;
 import { z } from "zod";
+import { assertDatabaseEnabled } from "../../../packages/config/src/deployment.ts";
 const DatabaseConfig = z.object({
   DATABASE_URL: z
     .string()
@@ -10,6 +11,7 @@ const DatabaseConfig = z.object({
 });
 let pool: PgPool | undefined;
 export function database(): PgPool {
+  assertDatabaseEnabled(process.env);
   if (!pool) {
     const env = DatabaseConfig.parse(process.env);
     pool = new pg.Pool({
