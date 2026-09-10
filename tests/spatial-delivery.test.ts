@@ -288,6 +288,60 @@ describe.skipIf(!process.env.DATABASE_TEST_URL)(
       );
       expect((await publicLayers(pool, env)).roadsUrl).toBeNull();
     });
+    it("rejects publication when caching rights are revoked after delivery", async () => {
+      const f = await fixture();
+      await publishObjectRelease(pool, f.id, f.directory, store, base);
+      await pool.query("UPDATE sources SET caching='UNKNOWN' WHERE id=$1", [
+        f.source,
+      ]);
+      await expect(
+        publishRelease(actor, f.id, pool, env),
+      ).rejects.toMatchObject({ code: "RELEASE_GATE" });
+    });
+    it("rejects publication when the license reference is removed after delivery", async () => {
+      const f = await fixture();
+      await publishObjectRelease(pool, f.id, f.directory, store, base);
+      await pool.query(
+        "UPDATE sources SET license_reference=NULL WHERE id=$1",
+        [f.source],
+      );
+      await expect(
+        publishRelease(actor, f.id, pool, env),
+      ).rejects.toMatchObject({ code: "RELEASE_GATE" });
+    });
+    it("suppresses a published layer when caching rights are revoked", async () => {
+      const f = await fixture();
+      const delivered = await publishObjectRelease(
+        pool,
+        f.id,
+        f.directory,
+        store,
+        base,
+      );
+      await publishRelease(actor, f.id, pool, env);
+      expect((await publicLayers(pool, env)).roadsUrl).toBe(delivered.url);
+      await pool.query("UPDATE sources SET caching='UNKNOWN' WHERE id=$1", [
+        f.source,
+      ]);
+      expect((await publicLayers(pool, env)).roadsUrl).toBeNull();
+    });
+    it("suppresses a published layer when its license reference is removed", async () => {
+      const f = await fixture();
+      const delivered = await publishObjectRelease(
+        pool,
+        f.id,
+        f.directory,
+        store,
+        base,
+      );
+      await publishRelease(actor, f.id, pool, env);
+      expect((await publicLayers(pool, env)).roadsUrl).toBe(delivered.url);
+      await pool.query(
+        "UPDATE sources SET license_reference=NULL WHERE id=$1",
+        [f.source],
+      );
+      expect((await publicLayers(pool, env)).roadsUrl).toBeNull();
+    });
     it("terrain survives removal of web-independent input; manifest and tile checksums remain unchanged", async () => {
       const f = await fixture("TERRAIN");
       const delivered = await publishObjectRelease(
