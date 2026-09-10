@@ -228,6 +228,13 @@ test("lazy engine download failure preserves public search and details", async (
   await expect(
     page.getByRole("heading", { name: "Không tải được bản đồ 3D" }),
   ).toBeVisible({ timeout: 30000 });
+  await expect(page.getByTestId("spatial-viewer")).toHaveAttribute(
+    "data-cesium-state",
+    "FAILED",
+  );
+  await expect(
+    page.getByRole("button", { name: "Tải lại bản đồ 3D" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Tìm kiếm", exact: true }),
   ).toBeEnabled();

@@ -4,10 +4,16 @@ import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import type {
   LayerId,
+  LayerReadiness,
   ViewerDiagnostics,
 } from "../../../../packages/spatial-types/src/viewer";
 import type { SpatialViewerProps } from "./types";
 import { loadLandTerrain } from "./terrain-provider";
+import {
+  cameraFlightDuration,
+  initialLayerReadiness,
+  regionalCameraFrame,
+} from "./viewer-state";
 declare global {
   interface Window {
     CESIUM_BASE_URL: string;
@@ -19,6 +25,20 @@ const layers: { id: LayerId; label: string }[] = [
   { id: "roads", label: "Đường" },
   { id: "places", label: "Địa điểm" },
 ];
+const readinessLabels: Record<LayerReadiness, string> = {
+  UNAVAILABLE: "Chưa khả dụng",
+  INITIALIZING: "Đang khởi tạo",
+  READY: "Sẵn sàng",
+  FAILED: "Lỗi",
+};
+
+function hasWebGlSupport() {
+  const canvas = document.createElement("canvas");
+  return Boolean(
+    (window.WebGL2RenderingContext || window.WebGLRenderingContext) &&
+    (canvas.getContext("webgl2") || canvas.getContext("webgl")),
+  );
+}
 export default function ViewerEngine(props: SpatialViewerProps) {
   const host = useRef<HTMLDivElement>(null),
     viewer = useRef<Cesium.Viewer | null>(null),
@@ -27,15 +47,24 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     terrain = useRef<Cesium.TerrainProvider | null>(null),
     callbacks = useRef(props);
   const telemetry = useRef<ViewerDiagnostics | null>(null);
+  const reducedMotion = useRef(false);
   const [ready, setReady] = useState(false),
     [generation, setGeneration] = useState(0),
+    [retry, setRetry] = useState(0),
     [settled, setSettled] = useState(false),
     [focusedId, setFocusedId] = useState<string | null>(null),
     [failed, setFailed] = useState(false),
+    [failureReason, setFailureReason] = useState<
+      "WEBGL_UNAVAILABLE" | "CESIUM_FAILED" | null
+    >(null),
+    [cameraMotion, setCameraMotion] = useState<
+      "IDLE" | "ANIMATED" | "REDUCED" | "INTERRUPTED"
+    >("IDLE"),
     [notice, setNotice] = useState(""),
-    [terrainState, setTerrainState] = useState("UNCONFIGURED"),
+    [layerReadiness, setLayerReadiness] = useState(() =>
+      initialLayerReadiness(props.config),
+    ),
     [terrainDetails, setTerrainDetails] = useState(""),
-    [roadsState, setRoadsState] = useState("UNCONFIGURED"),
     [renderedWidth, setRenderedWidth] = useState(0),
     [renderState, setRenderState] = useState("INITIALIZING"),
     [visible, setVisible] = useState<Record<LayerId, boolean>>({
@@ -52,6 +81,15 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     callbacks.current = props;
   }, [props]);
   useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => {
+      reducedMotion.current = media.matches;
+    };
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  useEffect(() => {
     let disposed = false,
       instance: Cesium.Viewer | null = null,
       handler: Cesium.ScreenSpaceEventHandler | null = null;
@@ -59,25 +97,35 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     const controller = new AbortController();
     cleanup.push(() => controller.abort());
     const start = performance.now();
+    const startingLayers = initialLayerReadiness(props.config);
     const diagnostics: ViewerDiagnostics = {
       initialized: false,
       webgl: false,
-      terrainStatus: "UNCONFIGURED",
-      imageryStatus: "PLACEHOLDER",
+      layers: { ...startingLayers },
       terrainRelease: props.config.terrainRelease,
       roadsRelease: props.config.roadsRelease,
       failedRequests: 0,
       initializationMs: null,
       firstFrameMs: null,
       firstStableFrameMs: null,
-      roadsStatus: "UNCONFIGURED",
       clientErrors: 0,
       placeLayerMs: null,
     };
     telemetry.current = diagnostics;
     const emit = () => callbacks.current.onDiagnostics?.({ ...diagnostics });
+    const setLayer = (id: LayerId, state: LayerReadiness) => {
+      diagnostics.layers[id] = state;
+      setLayerReadiness({ ...diagnostics.layers });
+      emit();
+    };
+    const failUsableLayers = () => {
+      for (const layer of layers)
+        if (diagnostics.layers[layer.id] !== "UNAVAILABLE")
+          diagnostics.layers[layer.id] = "FAILED";
+      setLayerReadiness({ ...diagnostics.layers });
+    };
     async function initialize() {
-      if (!host.current || props.forceFallback)
+      if (!host.current || props.forceFallback || !hasWebGlSupport())
         throw Error("WEBGL_UNAVAILABLE");
       window.CESIUM_BASE_URL = "/cesium/";
       Cesium.Ion.defaultAccessToken = "";
@@ -122,19 +170,24 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         }),
       );
       imagery.show = true;
+      setLayer("imagery", "READY");
       terrain.current = v.terrainProvider;
       v.scene.screenSpaceCameraController.minimumZoomDistance =
         props.config.minimumCameraHeight;
       v.scene.screenSpaceCameraController.maximumZoomDistance =
         props.config.maximumCameraHeight;
-      const initial = props.config.initialView;
+      const initial = regionalCameraFrame(props.config, true);
       v.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(
           initial.longitude,
           initial.latitude,
           initial.heightMeters,
         ),
-        orientation: { heading: 0, pitch: Cesium.Math.toRadians(-55), roll: 0 },
+        orientation: {
+          heading: Cesium.Math.toRadians(initial.headingDegrees),
+          pitch: Cesium.Math.toRadians(initial.pitchDegrees),
+          roll: 0,
+        },
       });
       const points = new Cesium.CustomDataSource("LAND places");
       points.clustering.enabled = true;
@@ -143,6 +196,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       placeLayer.current = points;
       await v.dataSources.add(points);
       if (disposed) return;
+      setLayer("places", callbacks.current.placesReadiness ?? "READY");
       handler = new Cesium.ScreenSpaceEventHandler(v.scene.canvas);
       const positionAt = (screen: Cesium.Cartesian2) => {
         const ray = v.camera.getPickRay(screen);
@@ -166,6 +220,8 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
       let dragging = false;
       handler.setInputAction((event: { position: Cesium.Cartesian2 }) => {
+        v.camera.cancelFlight();
+        setCameraMotion("INTERRUPTED");
         if (!callbacks.current.picker) return;
         const selected = v.scene.pick(event.position);
         if (
@@ -185,6 +241,17 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         dragging = false;
         v.scene.screenSpaceCameraController.enableRotate = true;
       }, Cesium.ScreenSpaceEventType.LEFT_UP);
+      const interruptFlight = () => {
+        v.camera.cancelFlight();
+        setCameraMotion("INTERRUPTED");
+      };
+      for (const eventType of [
+        Cesium.ScreenSpaceEventType.MIDDLE_DOWN,
+        Cesium.ScreenSpaceEventType.RIGHT_DOWN,
+        Cesium.ScreenSpaceEventType.WHEEL,
+        Cesium.ScreenSpaceEventType.PINCH_START,
+      ])
+        handler.setInputAction(interruptFlight, eventType);
       cleanup.push(
         v.camera.moveEnd.addEventListener(() => {
           const p = v.camera.positionCartographic,
@@ -238,8 +305,9 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           !cameraMoving &&
           v.scene.globe.tilesLoaded &&
           v.dataSourceDisplay.ready &&
-          (!props.config.terrainUrl || diagnostics.terrainStatus === "READY") &&
-          (!props.config.roadsUrl || diagnostics.roadsStatus === "READY")
+          (!props.config.terrainUrl ||
+            diagnostics.layers.terrain === "READY") &&
+          (!props.config.roadsUrl || diagnostics.layers.roads === "READY")
         ) {
           stableFrames++;
           setSettled(stableFrames >= 2);
@@ -254,8 +322,8 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           stableFrames = 0;
           setSettled(false);
           if (
-            diagnostics.terrainStatus !== "FAILED" &&
-            diagnostics.roadsStatus !== "FAILED"
+            diagnostics.layers.terrain !== "FAILED" &&
+            diagnostics.layers.roads !== "FAILED"
           )
             v.scene.requestRender();
         }
@@ -268,6 +336,10 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       cleanup.push(
         v.scene.renderError.addEventListener(() => {
           diagnostics.clientErrors++;
+          diagnostics.webgl = false;
+          failUsableLayers();
+          setReady(false);
+          setFailureReason("CESIUM_FAILED");
           emit();
           setFailed(true);
         }),
@@ -311,13 +383,11 @@ export default function ViewerEngine(props: SpatialViewerProps) {
             });
           }
           v.scene.requestRender();
-          diagnostics.terrainStatus = "READY";
-          setTerrainState("READY");
+          setLayer("terrain", "READY");
           cleanup.push(
             provider.errorEvent.addEventListener(() => {
               diagnostics.failedRequests++;
-              diagnostics.terrainStatus = "FAILED";
-              setTerrainState("FAILED");
+              setLayer("terrain", "FAILED");
               setNotice(
                 "Có tile địa hình không tải được hoặc sai checksum. Không dùng vùng thiếu dữ liệu để đánh giá địa hình.",
               );
@@ -326,9 +396,8 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           );
         } catch {
           if (disposed) return;
-          diagnostics.terrainStatus = "FAILED";
           diagnostics.failedRequests++;
-          setTerrainState("FAILED");
+          setLayer("terrain", "FAILED");
           setNotice(
             "Không tải được terrain release. Lớp nền hiện tại không thể dùng để đánh giá địa hình.",
           );
@@ -357,13 +426,11 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           roadLayer.current = roads;
           roads.show = visibility.current.roads;
           await v.dataSources.add(roads);
-          setRoadsState("READY");
-          diagnostics.roadsStatus = "READY";
+          setLayer("roads", "READY");
           if (!disposed) v.scene.requestRender();
         } catch {
           if (disposed) return;
-          setRoadsState("FAILED");
-          diagnostics.roadsStatus = "FAILED";
+          setLayer("roads", "FAILED");
           diagnostics.failedRequests++;
           setNotice("Không tải được lớp đường.");
         }
@@ -373,10 +440,17 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       setGeneration((value) => value + 1);
       v.scene.requestRender();
     }
-    initialize().catch(() => {
+    initialize().catch((error: unknown) => {
       if (!disposed) {
         diagnostics.clientErrors++;
+        failUsableLayers();
+        setReady(false);
         setFailed(true);
+        setFailureReason(
+          error instanceof Error && error.message === "WEBGL_UNAVAILABLE"
+            ? "WEBGL_UNAVAILABLE"
+            : "CESIUM_FAILED",
+        );
         emit();
       }
     });
@@ -390,7 +464,13 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       roadLayer.current = null;
       terrain.current = null;
     };
-  }, [props.config, props.forceFallback]);
+  }, [props.config, props.forceFallback, retry]);
+  useEffect(() => {
+    if (!ready || !props.placesReadiness || !telemetry.current) return;
+    telemetry.current.layers.places = props.placesReadiness;
+    setLayerReadiness({ ...telemetry.current.layers });
+    callbacks.current.onDiagnostics?.({ ...telemetry.current });
+  }, [ready, props.placesReadiness]);
   useEffect(() => {
     const v = viewer.current,
       ds = placeLayer.current;
@@ -444,6 +524,9 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     let cancelled = false;
     if (p && entity) {
       setFocusedId(null);
+      v.camera.cancelFlight();
+      const duration = cameraFlightDuration(reducedMotion.current);
+      setCameraMotion(duration === 0 ? "REDUCED" : "ANIMATED");
       // Entity bounding sphere uses the rendered terrain-clamped position.
       // A zero-height geographic target would focus below a mountain marker.
       void v
@@ -453,7 +536,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
             Cesium.Math.toRadians(-70),
             3500,
           ),
-          duration: 1,
+          duration,
         })
         .then((completed) => {
           if (!cancelled && completed && !v.isDestroyed()) {
@@ -465,6 +548,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     }
     return () => {
       cancelled = true;
+      if (!v.isDestroyed()) v.camera.cancelFlight();
     };
   }, [ready, generation, props.selectedId, props.focusRequest]);
   useEffect(() => {
@@ -481,23 +565,36 @@ export default function ViewerEngine(props: SpatialViewerProps) {
   }, [ready, generation, visible]);
   const reset = (overhead = false) => {
     const v = viewer.current,
-      p = props.config.initialView;
+      frame = regionalCameraFrame(
+        props.config,
+        reducedMotion.current,
+        overhead,
+      );
     if (v && !v.isDestroyed()) {
+      v.camera.cancelFlight();
       setSettled(false);
-      v.camera.flyTo({
+      setCameraMotion(frame.durationSeconds === 0 ? "REDUCED" : "ANIMATED");
+      const view = {
         destination: Cesium.Cartesian3.fromDegrees(
-          p.longitude,
-          p.latitude,
-          p.heightMeters,
+          frame.longitude,
+          frame.latitude,
+          frame.heightMeters,
         ),
         orientation: {
-          heading: 0,
-          pitch: Cesium.Math.toRadians(overhead ? -90 : -55),
+          heading: Cesium.Math.toRadians(frame.headingDegrees),
+          pitch: Cesium.Math.toRadians(frame.pitchDegrees),
           roll: 0,
         },
-        duration: 1,
-        complete: () => v.scene.requestRender(),
-      });
+      };
+      if (frame.durationSeconds === 0) {
+        v.camera.setView(view);
+        v.scene.requestRender();
+      } else
+        v.camera.flyTo({
+          ...view,
+          duration: frame.durationSeconds,
+          complete: () => v.scene.requestRender(),
+        });
     }
   };
   return (
@@ -506,10 +603,14 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         className="spatial-viewer"
         data-testid="spatial-viewer"
         data-ready={ready && !failed ? "true" : "false"}
+        data-cesium-state={failed ? "FAILED" : ready ? "READY" : "INITIALIZING"}
+        data-camera-motion={cameraMotion}
         data-settled={settled ? "true" : "false"}
         data-focused-id={focusedId ?? ""}
-        data-terrain-status={terrainState}
-        data-roads-status={roadsState}
+        data-terrain-status={layerReadiness.terrain}
+        data-imagery-status={layerReadiness.imagery}
+        data-roads-status={layerReadiness.roads}
+        data-places-status={layerReadiness.places}
         data-rendered-width={renderedWidth}
         data-render-state={renderState}
       >
@@ -520,12 +621,27 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           aria-label="Bản đồ không gian 3D"
         />
         {failed ? (
-          <div className="viewer-fallback" role="status">
+          <div className="viewer-fallback" role="alert">
             <h2>Không mở được bản đồ 3D</h2>
             <p>
-              Thiết bị hoặc trình duyệt chưa hỗ trợ WebGL. Bạn vẫn có thể tìm và
-              đọc thông tin địa điểm bên cạnh.
+              {failureReason === "WEBGL_UNAVAILABLE"
+                ? "Thiết bị hoặc trình duyệt chưa cung cấp WebGL."
+                : "Cesium không thể khởi tạo trong trình duyệt này."}{" "}
+              Bạn vẫn có thể tìm và đọc thông tin địa điểm bên cạnh.
             </p>
+            <button
+              type="button"
+              onClick={() => {
+                setReady(false);
+                setFailed(false);
+                setFailureReason(null);
+                setSettled(false);
+                setLayerReadiness(initialLayerReadiness(props.config));
+                setRetry((value) => value + 1);
+              }}
+            >
+              Thử lại bản đồ 3D
+            </button>
           </div>
         ) : (
           <>
@@ -534,7 +650,15 @@ export default function ViewerEngine(props: SpatialViewerProps) {
                 <label key={layer.id}>
                   <input
                     type="checkbox"
-                    checked={visible[layer.id]}
+                    checked={
+                      visible[layer.id] &&
+                      layerReadiness[layer.id] !== "UNAVAILABLE" &&
+                      layerReadiness[layer.id] !== "FAILED"
+                    }
+                    disabled={
+                      layerReadiness[layer.id] === "UNAVAILABLE" ||
+                      layerReadiness[layer.id] === "FAILED"
+                    }
                     onChange={(event) =>
                       setVisible((v) => ({
                         ...v,
@@ -561,6 +685,18 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           </>
         )}
       </div>
+      <ul
+        className="viewer-layer-readiness"
+        aria-label="Trạng thái sẵn sàng của lớp bản đồ"
+        aria-live="polite"
+      >
+        {layers.map((layer) => (
+          <li key={layer.id}>
+            <span>{layer.label}</span>
+            <strong>{readinessLabels[layerReadiness[layer.id]]}</strong>
+          </li>
+        ))}
+      </ul>
       {terrainDetails && (
         <details className="terrain-attribution">
           <summary>Nguồn địa hình · {props.config.terrainRelease}</summary>

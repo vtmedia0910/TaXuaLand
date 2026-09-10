@@ -259,6 +259,23 @@ th {
 .viewer-loading {
   pointer-events: none;
 }
+.viewer-layer-readiness {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: #b2c2d5;
+  font-size: 0.85rem;
+}
+.viewer-layer-readiness li {
+  display: flex;
+  gap: 0.35rem;
+}
+.viewer-layer-readiness strong {
+  color: #eff6ff;
+}
 @media (max-width: 760px) {
   .public-header {
     padding: 1rem;

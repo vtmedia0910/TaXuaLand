@@ -2,6 +2,9 @@ import { z } from "zod";
 import { Wgs84Position } from "./index";
 export const LayerId = z.enum(["terrain", "imagery", "roads", "places"]);
 export type LayerId = z.infer<typeof LayerId>;
+export type LayerReadiness =
+  "UNAVAILABLE" | "INITIALIZING" | "READY" | "FAILED";
+export type ViewerLayerReadiness = Record<LayerId, LayerReadiness>;
 export const ViewerConfig = z
   .object({
     aoi: z
@@ -41,15 +44,13 @@ export interface ViewerPoint {
 export interface ViewerDiagnostics {
   initialized: boolean;
   webgl: boolean;
-  terrainStatus: "UNCONFIGURED" | "READY" | "FAILED";
-  imageryStatus: "PLACEHOLDER";
+  layers: ViewerLayerReadiness;
   terrainRelease: string | null;
   roadsRelease: string | null;
   failedRequests: number;
   initializationMs: number | null;
   firstFrameMs: number | null;
   firstStableFrameMs: number | null;
-  roadsStatus: "UNCONFIGURED" | "READY" | "FAILED";
   clientErrors: number;
   placeLayerMs: number | null;
 }

@@ -27,7 +27,9 @@ Phase 0.5 pull request
 MERGED
 ```
 
-PR #2 is merged into `main`, and the agent-workflow documentation layer is installed through its separate documentation-only migration. Phase 0 architecture remains frozen and Phase 1 has not started. Re-check Git for the current `main` HEAD rather than treating the Phase 0.5 merge baseline as the latest repository SHA.
+PR #2 is merged into `main`, and the agent-workflow documentation layer is installed through its separate documentation-only migration. Phase 0 architecture remains frozen. Re-check Git for the current `main` HEAD rather than treating the Phase 0.5 merge baseline as the latest repository SHA.
+
+The approved Phase 1 specification is merged through PR #4. Phase 1 implementation is now in progress on Slice 1A only.
 
 ### Local-state boundary
 
@@ -67,12 +69,13 @@ MERGED THROUGH PR #2
 
 Phase 1
 Tà Xùa 3D
-NOT STARTED
+IN PROGRESS
 SPECIFICATION APPROVED
-IMPLEMENTATION AUTHORIZATION EFFECTIVE ON PR #4 MERGE
+PR #4 MERGED
+ACTIVE SLICE: 1A — PUBLIC 3D SHELL + REGIONAL CAMERA + DEGRADED-STATE BASELINE
 ```
 
-The owner approved the Phase 1 specification and its four scope/data-readiness decisions on 2026-09-11. No Phase 1 implementation belongs in PR #4; implementation begins only after the approved specification passes required CI and is merged.
+The owner approved the Phase 1 specification and its four scope/data-readiness decisions on 2026-09-11. PR #4 merged the documentation-only specification; Slice 1A is the first authorized implementation work.
 
 The current architecture freeze remains in force. The approved specification extends it without reopening the frozen authority, publication, verification, provenance, security, or provider boundaries.
 
@@ -428,7 +431,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-Merge the approved `docs/PHASE_1_TA_XUA_3D.md` through PR #4 after required CI passes. Then begin Slice 1A on a separate implementation branch.
+Complete Slice 1A validation and deliver it through a dedicated PR, then stop for final review before merge.
 
 ---
 
@@ -494,13 +497,13 @@ PHASE 0.5 PR
 #2 — MERGED
 
 CURRENT PHASE
-Phase 1 specification approved; implementation not started
+Phase 1 in progress — Slice 1A
 
 PRIMARY CURRENT GOAL
-Merge the approved Phase 1 specification through PR #4 without implementation code
+Deliver the public 3D shell, regional camera and degraded-state baseline
 
 PHASE 1
-NOT STARTED / AUTHORIZATION EFFECTIVE ON PR #4 MERGE
+IN PROGRESS / ACTIVE SLICE 1A
 
 ARCHITECTURE
 FROZEN
@@ -512,5 +515,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-After PR #4 passes required CI and merges, begin Slice 1A on a separate implementation branch.
+Complete Slice 1A validation and open its dedicated PR for final review.
 ```

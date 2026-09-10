@@ -13,6 +13,7 @@ import {
 } from "@land/contracts";
 import type { z } from "zod";
 import type {
+  LayerReadiness,
   ViewerConfig,
   ViewerPoint,
 } from "../../../packages/spatial-types/src/viewer";
@@ -91,6 +92,11 @@ function Explorer({ config, categories, initialSlug }: Props) {
       state: "CURRENT",
     }));
   }, [list.data, detail.data]);
+  const placesReadiness: LayerReadiness = list.isError
+    ? "FAILED"
+    : list.isPending
+      ? "INITIALIZING"
+      : "READY";
   const select = (next: string | null) => {
     setSlug(next);
     const url = new URL(window.location.href);
@@ -105,6 +111,7 @@ function Explorer({ config, categories, initialSlug }: Props) {
           config={config}
           points={points}
           selectedId={detail.data?.id ?? null}
+          placesReadiness={placesReadiness}
           onSelect={(id) => {
             const p = list.data?.items.find((p) => p.id === id);
             if (p) select(p.slug);
@@ -219,4 +226,3 @@ function Explorer({ config, categories, initialSlug }: Props) {
     </div>
   );
 }
-
