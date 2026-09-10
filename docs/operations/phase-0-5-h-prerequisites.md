@@ -1,5 +1,116 @@
 # 0.5-H — external staging access handoff
 
+> **CURRENT STATUS — CLOSED 2026-09-11**
+>
+> Phase 0.5 provider acceptance is PASS and PR #2 is merged into `main` at `47b3f8fabbba5f784092b13c8c1fa6205fe8ed47`. Phase 1 has not started and still requires its dedicated specification plus explicit owner approval.
+>
+> This file is now a historical prerequisite/setup record and security/provider acceptance checklist. All OPEN, DRAFT, NOT MERGED, PARTIAL, and NOT CLOSED statements below describe earlier snapshots and are not current-state authority. Use `docs/status/CURRENT.md` for mutable current state and `docs/operations/phase-0-5-h-provider-acceptance.md` for the final sanitized provider conclusion.
+>
+> **HISTORICAL PRE-CLOSEOUT CORRECTION — 2026-09-11**
+>
+> This document was originally written on 2026-09-09 as a prerequisite handoff at a point when external LAND provider access had not yet been supplied to that task.
+>
+> The original historical body is preserved below because it remains useful for provider setup, security boundaries, least-privilege requirements, environment contracts, and acceptance criteria.
+>
+> However, its original opening status:
+>
+> ```text
+> BLOCKED on external deployment access
+> ```
+>
+> is **historical checkpoint context, not current-state authority**.
+>
+> The 2026-09-11 project handoff reports that substantial external setup was completed after this document was written, including:
+>
+> ```text
+> dedicated LAND Vercel staging project
+> dedicated Supabase/PostGIS staging project
+> LAND runtime database role
+> working Admin bootstrap/login
+> Cloudflare R2 private bucket
+> Cloudflare R2 published bucket
+> separate R2 credential roles
+> R2 lifecycle configuration
+> R2 CORS configuration
+> staging public asset endpoint
+> ```
+>
+> Fresh GitHub inspection still shows:
+>
+> ```text
+> PR #2
+> Phase 0.5: production deployment hardening
+>
+> state:
+> OPEN
+>
+> draft:
+> YES
+>
+> merged:
+> NO
+>
+> branch:
+> feat/phase-0-5-production-deployment
+>
+> head:
+> fb81e012c59d880a2b4b2e48e035c6cf6332f053
+>
+> base main:
+> f7080f8a1943d9d86e3c747882b615294a60bd21
+> ```
+>
+> The current conclusion is therefore:
+>
+> ```text
+> EXTERNAL ACCESS MISSING
+> → historical
+>
+> PROVIDER RESOURCES
+> → substantially configured according to handoff
+>
+> COMPLETE PROVIDER ACCEPTANCE
+> → not yet proven closed
+>
+> PHASE 0.5
+> → still open
+>
+> PHASE 1
+> → not started
+> ```
+>
+> The remaining task is evidence/acceptance closure, not blindly recreating provider resources.
+>
+> In particular, current closeout should confirm or complete the required cloud-origin R2 lifecycle/integrity/public-delivery evidence, diagnostic cleanup, and credential-separation evidence.
+>
+> A local Windows TLS failure against the R2 S3 endpoint does **not** by itself establish provider failure.
+>
+> After the agent-workflow documentation layer is installed, use:
+>
+> ```text
+> docs/status/CURRENT.md
+> ```
+>
+> for mutable current state.
+>
+> Use this file primarily as:
+>
+> ```text
+> historical prerequisite/setup record
+> +
+> security/provider acceptance checklist
+> ```
+>
+> Do not follow setup steps that are already complete merely because they remain in the historical body. Re-check actual provider state first.
+>
+> Do not expose secrets while reconciling current state.
+
+---
+
+## Original historical prerequisite handoff — preserved
+
+# 0.5-H — external staging access handoff
+
 Status: **BLOCKED on external deployment access, not staging PASS**. Checked 2026-09-09 at HEAD `16df9886a7fbdcbbb712467854662b165c12c3df`, branch `feat/phase-0-5-production-deployment`, PR #2. Owner reports GitHub check/e2e-core PASS on this commit. Cached origin/main is `f7080f8a1943d9d86e3c747882b615294a60bd21`; no fetch, Git write, deployment or account creation performed.
 
 ## Evidence and boundary
@@ -133,3 +244,290 @@ Do not call the local QA registration script against cloud to auto-approve sourc
 6. Record 100/500/2,000-row upload/finalize/parse/validation/total timing and observable memory on real functions; homepage/map ready/map stable/API/login and cold/warm terrain CDN. No fabricated timing or increased timeout workaround; inability to reliably handle 2,000 rows requires stopping for a worker ADR.
 
 Repository validation is separate from these unchecked cloud gates. No H PASS until actual evidence exists. Stop here for external access; do not start I/J or Phase 1.
+
+
+---
+
+# Historical 2026-09-11 pre-closeout reconciliation
+
+The original prerequisite handoff above remains intentionally preserved.
+
+The following section clarifies how it should be used now.
+
+## 1. What is no longer current
+
+Do not treat these original statements as current facts without re-checking:
+
+```text
+BLOCKED on external deployment access
+
+no LAND provider access supplied
+
+H now needs actual accounts and endpoints
+
+all cloud acceptance checks NOT RUN
+```
+
+Those statements described the 2026-09-09 checkpoint.
+
+The later handoff reports that the owner subsequently created/configured substantial external LAND infrastructure.
+
+## 2. What remains valid
+
+The following original guidance remains applicable unless newer approved repository/provider contracts supersede it:
+
+```text
+LAND-only provider resources
+
+no BIKER/TRIP credential reuse
+
+least-privilege runtime database role
+
+separate operator and runtime database authority
+
+private and published storage separation
+
+published operator credential separate from web runtime
+
+exact trusted origins
+
+no secrets in chat/Git/screenshots
+
+no NEXT_PUBLIC server secrets
+
+provider-neutral storage/domain boundaries
+
+immutable published release behavior
+
+source/license/release authority remains in LAND/PostGIS
+
+diagnostic objects must be bounded and temporary
+
+provider acceptance requires actual external evidence
+```
+
+## 3. Snapshot provider posture
+
+According to the 2026-09-11 handoff:
+
+```text
+Vercel staging deployment
+PASS / established
+
+Supabase/PostGIS staging
+PASS / established
+
+LAND runtime role
+PASS / established
+
+Admin login
+PASS / established
+
+R2 resources
+CONFIGURED
+
+local Windows R2 S3 TLS path
+FAILS FROM THAT CLIENT PATH
+
+R2 provider failure
+NOT ESTABLISHED
+
+complete cloud R2 lifecycle acceptance
+REQUIRES CONFIRMATION / COMPLETION
+
+overall Phase 0.5 provider acceptance
+PARTIAL / NOT CLOSED
+```
+
+Use fresh provider evidence if it differs.
+
+## 4. Historical remaining H acceptance focus
+
+The current H task should be narrowed to evidence that remains unproven.
+
+Confirm or complete the applicable:
+
+```text
+private diagnostic lifecycle:
+PUT
+HEAD
+GET
+exact-byte / SHA-256 verify
+DELETE
+cleanup verify
+
+published operator diagnostic lifecycle:
+PUT
+HEAD
+GET
+exact-byte / SHA-256 verify
+DELETE
+cleanup verify
+
+public published delivery:
+anonymous GET
+expected HTTP status
+exact-byte verify
+relevant HEAD/Range/CORS/cache behavior
+
+credential separation:
+private runtime credential configured where required
+published operator credential absent from web runtime
+DB owner/bootstrap credential absent from web runtime
+
+no secrets exposed in evidence
+```
+
+Use only temporary diagnostic objects under the approved diagnostic namespace.
+
+Do not mutate authoritative Place/Property/dataset/verification state merely to prove storage health.
+
+## 5. Do not recreate already-configured infrastructure blindly
+
+Before running any "create" or "configure" instruction in the historical body:
+
+```text
+inspect current provider state
+→ compare to repository contract
+→ identify actual missing evidence/config
+→ change only what is genuinely required
+```
+
+If current provider setup already satisfies the contract, preserve it and close evidence first.
+
+Do not "clean up" bucket names, CORS, lifecycle, pool mode, deployment branch, or other provider settings during a report-only acceptance task unless evidence shows a material problem.
+
+## 6. Local Windows TLS failure handling
+
+Do not disable certificate verification.
+
+Do not classify:
+
+```text
+local TLS failure
+```
+
+as:
+
+```text
+provider outage
+```
+
+without independent evidence.
+
+Prefer an approved cloud execution environment for the bounded diagnostic lifecycle when the local Windows path cannot complete the TLS handshake.
+
+Record execution context in the final report.
+
+## 7. Historical completion gate
+
+Phase 0.5-H may be marked PASS only when required external evidence is complete.
+
+Minimum expected closeout remains:
+
+```text
+[ ] deployed LAND application reachable
+[ ] Admin authentication works
+[ ] runtime DB identity/health works
+[ ] PostGIS diagnostics pass
+[ ] private object-storage lifecycle passes
+[ ] published operator lifecycle passes
+[ ] public published-object delivery passes
+[ ] integrity matches
+[ ] diagnostic cleanup passes
+[ ] runtime/operator credential separation evidenced
+[ ] no secret exposed
+```
+
+Use the narrowest defensible state.
+
+If a required area is still unproven:
+
+```text
+PARTIAL PASS
+```
+
+not PASS.
+
+## 8. PR and phase boundary
+
+Current remote snapshot at reconciliation:
+
+```text
+PR #2
+OPEN
+DRAFT
+NOT MERGED
+MERGEABLE
+
+head
+fb81e012c59d880a2b4b2e48e035c6cf6332f053
+
+base main
+f7080f8a1943d9d86e3c747882b615294a60bd21
+```
+
+Do not merge solely because GitHub reports the PR mergeable.
+
+Do not begin Phase 1 before:
+
+```text
+Phase 0.5 evidence closes
+→ final review completes
+→ PR #2 merges
+→ clean main baseline is established
+→ dedicated Phase 1 specification is approved
+```
+
+## 9. Current-state authority after workflow migration
+
+Once the new workflow files are installed, use:
+
+```text
+CONTEXT.md
+→ stable project/domain context
+
+docs/status/CURRENT.md
+→ mutable branch/PR/blocker/next-action status
+
+docs/agents/SKILL_ROUTING.md
+→ Skill/Plugin ownership
+
+docs/agents/SPATIAL_3D_WORKFLOW.md
+→ 3D/Cesium specialist workflow
+
+docs/visual-specs/README.md
+→ visual authority index
+```
+
+This prerequisite document should remain a historical provider/setup record plus acceptance checklist.
+
+Do not continually rewrite its historical checkpoint to track every branch transition.
+
+## 10. Historical next action at this snapshot
+
+```text
+1. Re-check local and remote PR #2 state.
+
+2. Inspect any newer provider-acceptance report/evidence.
+
+3. Determine which H checks are already proven.
+
+4. Complete only missing bounded cloud R2 lifecycle/integrity/
+   public-delivery/cleanup checks.
+
+5. Confirm credential separation without exposing values.
+
+6. Update the sanitized final provider-acceptance report.
+
+7. Run repository-required validation appropriate to any changes.
+
+8. Review PR #2 for architecture/security/scope drift.
+
+9. Mark Ready and merge only when the required Phase 0.5 gates pass.
+
+10. Establish clean post-merge main.
+
+11. Do not start Phase 1 until its dedicated specification and owner
+    approval exist.
+```
