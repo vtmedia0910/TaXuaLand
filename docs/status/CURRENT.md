@@ -68,12 +68,13 @@ MERGED THROUGH PR #2
 Phase 1
 Tà Xùa 3D
 NOT STARTED
-NOT AUTHORIZED YET
+SPECIFICATION APPROVED
+IMPLEMENTATION AUTHORIZATION EFFECTIVE ON PR #4 MERGE
 ```
 
-Phase 1 must not begin merely because its visual specification already exists.
+The owner approved the Phase 1 specification and its four scope/data-readiness decisions on 2026-09-11. No Phase 1 implementation belongs in PR #4; implementation begins only after the approved specification passes required CI and is merged.
 
-The current architecture freeze explicitly requires a dedicated Phase 1 specification and explicit owner approval before Phase 1 implementation.
+The current architecture freeze remains in force. The approved specification extends it without reopening the frozen authority, publication, verification, provenance, security, or provider boundaries.
 
 ---
 
@@ -280,8 +281,8 @@ However:
 
 ```text
 PHASE 1 MUST NOT START
-until Phase 0.5 is closed and merged
-and the dedicated Phase 1 specification is approved.
+until the approved dedicated Phase 1 specification
+passes required CI and is merged through PR #4.
 ```
 
 Do not use the future visual board as authorization to implement Property, AI, full viewshed intelligence, or travel-commerce routing.
@@ -427,7 +428,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-Create and review the dedicated Phase 1 specification. Phase 1 implementation may begin only after explicit owner approval of that specification.
+Merge the approved `docs/PHASE_1_TA_XUA_3D.md` through PR #4 after required CI passes. Then begin Slice 1A on a separate implementation branch.
 
 ---
 
@@ -493,13 +494,13 @@ PHASE 0.5 PR
 #2 — MERGED
 
 CURRENT PHASE
-Phase 1 specification preparation only
+Phase 1 specification approved; implementation not started
 
 PRIMARY CURRENT GOAL
-Prepare the dedicated Phase 1 specification
+Merge the approved Phase 1 specification through PR #4 without implementation code
 
 PHASE 1
-NOT STARTED / NOT YET AUTHORIZED
+NOT STARTED / AUTHORIZATION EFFECTIVE ON PR #4 MERGE
 
 ARCHITECTURE
 FROZEN
@@ -511,5 +512,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-Prepare the dedicated Phase 1 specification; do not start implementation without explicit owner approval.
+After PR #4 passes required CI and merges, begin Slice 1A on a separate implementation branch.
 ```
