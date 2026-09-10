@@ -69,6 +69,7 @@ Phase 1
 Tà Xùa 3D
 NOT STARTED
 NOT AUTHORIZED YET
+SPECIFICATION UNDER OWNER REVIEW
 ```
 
 Phase 1 must not begin merely because its visual specification already exists.
@@ -427,7 +428,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-Create and review the dedicated Phase 1 specification. Phase 1 implementation may begin only after explicit owner approval of that specification.
+Review the draft `docs/PHASE_1_TA_XUA_3D.md` and resolve its owner/data decisions. Phase 1 implementation may begin only after explicit owner approval of that specification.
 
 ---
 
@@ -493,10 +494,10 @@ PHASE 0.5 PR
 #2 — MERGED
 
 CURRENT PHASE
-Phase 1 specification preparation only
+Phase 1 specification under owner review
 
 PRIMARY CURRENT GOAL
-Prepare the dedicated Phase 1 specification
+Review and approve or revise the dedicated Phase 1 specification
 
 PHASE 1
 NOT STARTED / NOT YET AUTHORIZED
@@ -511,5 +512,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-Prepare the dedicated Phase 1 specification; do not start implementation without explicit owner approval.
+Owner reviews the draft specification; do not start implementation without explicit approval.
 ```
