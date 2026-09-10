@@ -314,7 +314,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           (!props.config.roadsUrl || diagnostics.layers.roads === "READY")
         ) {
           stableFrames++;
-          setSettled(stableFrames >= 2);
+          if (stableFrames >= 2) setSettled(true);
           if (stableFrames >= 2 && diagnostics.firstStableFrameMs === null) {
             diagnostics.firstStableFrameMs = Math.round(
               performance.now() - start,
