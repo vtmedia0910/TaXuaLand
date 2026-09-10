@@ -29,3 +29,11 @@ Validation on 2026-09-08: 28 storage contract/security tests PASS with real file
 See object-storage.md for adapter contracts, local backing format, retry/conflict handling, checksum trust boundary, operator requirements and deferred acceptance. D will connect authenticated upload sessions/finalize and retention to these adapters, preserving legacy inspection compatibility. E will connect publication and approved public URL resolution. No credentials are required to complete C; staging provider credentials remain an H dependency.
 
 Owner checkpoint: review C and commit/push through host Git, then authorize D. Codex performed no Git writes. D–J and actual staging acceptance remain pending. Phase 1 has not started.
+
+## Phase 0.5 closeout
+
+Phase 0.5 provider acceptance is **PASS** on `feat/phase-0-5-production-deployment` at `fb81e012c59d880a2b4b2e48e035c6cf6332f053`.
+
+The earlier Windows R2 S3 TLS failure remains historical client/network-path evidence. An independent ephemeral Linux Docker run using `node:24-bookworm` completed private and published diagnostic PUT/HEAD/GET byte and SHA-256 verification, anonymous public HTTP 200 byte and SHA-256 verification, and confirmed cleanup in both buckets. Owner provider-configuration attestation confirms that the deployed `ta-xua-land-web` runtime has only the scoped private R2 credential and excludes published operator, database owner/bootstrap, and provider/account master credentials.
+
+The detailed sanitized evidence is recorded in `docs/operations/phase-0-5-h-provider-acceptance.md`. No provider configuration, source/runtime code, authoritative data, published release, or Phase 1 scope changed during closeout. Final PR review remains required before PR #2 is marked ready or merged.
