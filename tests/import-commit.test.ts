@@ -17,6 +17,7 @@ import { commitImport } from "../services/api/src/import-commit";
 import { savePlace, getPlace } from "../services/api/src/places";
 import { PlaceInput } from "../services/api/src/place-input";
 import type { Actor } from "../services/api/src/auth";
+import { importStorage } from "../services/api/src/import-storage";
 
 const connection = process.env.DATABASE_TEST_URL;
 describe.skipIf(!connection)("atomic explicit import commit in PostGIS", () => {
@@ -58,6 +59,13 @@ describe.skipIf(!connection)("atomic explicit import commit in PostGIS", () => {
     );
   }, 30000);
   afterAll(async () => {
+    if (pool)
+      for (const row of (
+        await pool.query("SELECT raw_key,inspection_key FROM import_uploads")
+      ).rows) {
+        if (row.raw_key) await importStorage().store.delete(row.raw_key);
+        await importStorage().store.delete(row.inspection_key);
+      }
     for (const id of batches)
       await unlink(`work/imports/${id}.json`).catch(() => {});
     await pool?.end();

@@ -1,20 +1,32 @@
 import { fork } from "node:child_process";
 import { resolve } from "node:path";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { existsSync } from "node:fs";
 import {
   InspectedWorkbook,
   IMPORT_LIMITS,
-} from "../../../packages/contracts/src/import";
-import { AppError } from "./errors";
+} from "../../../packages/contracts/src/import.ts";
+import { AppError } from "./errors.ts";
 let active = 0;
 export function landWorkspace() {
-  return resolve(
-    process.env.LAND_WORKSPACE_ROOT ||
-      (process.cwd().endsWith("web") ? "../.." : "."),
+  if (process.env.LAND_WORKSPACE_ROOT)
+    return resolve(process.env.LAND_WORKSPACE_ROOT);
+  // Both Next's monorepo cwd and Vercel's traced function root are supported.
+  for (const root of [process.cwd(), resolve(process.cwd(), "../..")])
+    if (existsSync(resolve(root, "workers/import/src/parse-workbook.ts")))
+      return root;
+  throw new AppError(
+    "IMPORT_WORKER_FAILED",
+    503,
+    "Không tìm thấy bộ xử lý workbook.",
   );
 }
 export async function inspectWorkbookIsolated(
   bytes: Buffer,
 ): Promise<InspectedWorkbook> {
+  if (bytes.length > IMPORT_LIMITS.uploadBytes)
+    throw new AppError("UPLOAD_TOO_LARGE", 413, "Workbook vượt 8 MiB.");
   if (active >= 2)
     throw new AppError(
       "IMPORT_BUSY",
@@ -22,7 +34,11 @@ export async function inspectWorkbookIsolated(
       "Đang xử lý workbook khác. Thử lại sau.",
     );
   active++;
+  let scratch: string | undefined;
   try {
+    scratch = await mkdtemp(resolve(tmpdir(), "taxualand-import-"));
+    const inputPath = resolve(scratch, "input.xlsx");
+    await writeFile(inputPath, bytes, { flag: "wx", mode: 0o600 });
     return await new Promise((resolveResult, reject) => {
       const child = fork(
         resolve(landWorkspace(), "workers/import/src/parse-workbook.ts"),
@@ -32,6 +48,7 @@ export async function inspectWorkbookIsolated(
           execArgv: [
             "--max-old-space-size=192",
             "--permission",
+            `--allow-fs-read=${inputPath}`,
             ...[
               "node_modules",
               "packages/contracts",
@@ -114,9 +131,19 @@ export async function inspectWorkbookIsolated(
           );
         }
       });
-      child.send(bytes);
+      child.send(inputPath);
     });
   } finally {
-    active--;
+    try {
+      if (scratch)
+        await rm(scratch, {
+          recursive: true,
+          force: true,
+          maxRetries: 5,
+          retryDelay: 100,
+        });
+    } finally {
+      active--;
+    }
   }
 }

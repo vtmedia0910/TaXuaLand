@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 export function ImportUpload({
   sources,
@@ -11,6 +11,11 @@ export function ImportUpload({
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
   const router = useRouter();
+  const retry = useRef<{
+    file: File;
+    sourceId: string;
+    requestId: string;
+  } | null>(null);
   return (
     <form
       className="card"
@@ -21,22 +26,65 @@ export function ImportUpload({
         setMessage("");
         try {
           if (file.size > 8 * 1024 * 1024) throw Error("File vượt 8 MiB.");
-          const response = await fetch(
-            `/api/admin/imports?sourceId=${sourceId}`,
+          if (
+            !retry.current ||
+            retry.current.file !== file ||
+            retry.current.sourceId !== sourceId
+          )
+            retry.current = { file, sourceId, requestId: crypto.randomUUID() };
+          const digest = Array.from(
+            new Uint8Array(
+              await crypto.subtle.digest("SHA-256", await file.arrayBuffer()),
+            ),
+            (b) => b.toString(16).padStart(2, "0"),
+          ).join("");
+          const response = await fetch("/api/admin/imports/upload-session", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              requestId: retry.current.requestId,
+              sourceId,
+              name: file.name,
+              mime:
+                file.type ||
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              size: file.size,
+              sha256: digest,
+            }),
+          });
+          const result = await response.json();
+          if (!response.ok) {
+            if (response.status === 410) retry.current = null;
+            throw Error(result.error?.message ?? "Upload thất bại.");
+          }
+          if (result.upload) {
+            const uploaded = await fetch(result.upload.url, {
+              method: result.upload.method,
+              headers: result.upload.headers,
+              body: file,
+              credentials:
+                result.transport === "local" ? "same-origin" : "omit",
+            });
+            // A retry can find an immutable object from a prior successful PUT.
+            if (!uploaded.ok && uploaded.status !== 412)
+              throw Error("Upload workbook thất bại. Thử lại cùng file.");
+          }
+          const finalized = await fetch(
+            `/api/admin/imports/${result.id}/finalize-upload`,
             {
               method: "POST",
-              headers: {
-                "Content-Type":
-                  file.type ||
-                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "X-File-Name": encodeURIComponent(file.name),
-              },
-              body: file,
+              headers: { "Content-Type": "application/json" },
+              body: "{}",
             },
           );
-          const result = await response.json();
-          if (!response.ok)
-            throw Error(result.error?.message ?? "Upload thất bại.");
+          if (!finalized.ok)
+            throw Error(
+              (await finalized.json()).error?.message ??
+                "Không thể kiểm tra workbook.",
+            );
+          retry.current = null;
           router.push(`/admin/imports/${result.id}`);
         } catch (error) {
           setMessage(

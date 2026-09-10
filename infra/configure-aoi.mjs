@@ -1,5 +1,6 @@
 import pg from 'pg';
-const pool = new pg.Pool({connectionString:process.env.DATABASE_URL});
+import { databaseOptions } from '../packages/config/src/database.ts';
+const pool = new pg.Pool(databaseOptions(process.env, true));
 try {
  const identity=(await pool.query('SELECT product FROM product_identity WHERE id=true')).rows[0];
  if(identity?.product!=='TAXUA_LAND')throw new Error('LAND database required');

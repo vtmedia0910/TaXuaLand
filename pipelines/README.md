@@ -1,5 +1,7 @@
 # Phase 0 GIS release workflow
 
+Phase 0.5-E adds the operator-only [immutable object delivery workflow](../docs/operations/spatial-object-publication.md). Use `publish-object-release.ts` for already approved registered terrain/road outputs; it does not replace GIS QA, invent source rights, or mutate an existing published release. Cloud runtime derives URLs from its approved public origin and PostGIS delivery receipt, without web deployment disk assets.
+
 Run from the LAND monorepo using Node 24 and a dedicated Python environment with `pip install -r pipelines/requirements.txt`. No BIKER/TRIP database, provider credentials or terrain secrets are used.
 
 1. `node pipelines/acquire.mjs` downloads the Copernicus GLO-30 COG N21 E104 and NGA EGM2008 geoid grid. First acquisition records public URLs, bytes, download time and SHA-256 in `sources.lock.json`; later runs require identical bytes. Review a changed upstream input as a new source version.

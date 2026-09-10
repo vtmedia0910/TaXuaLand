@@ -1,14 +1,22 @@
-import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
-import { resolve } from "node:path";
+import { randomUUID } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import { database, transaction } from "./db";
 import { audit, requirePermission, type Actor } from "./auth";
 import { AppError } from "./errors";
-import { inspectWorkbookIsolated, landWorkspace } from "./import-worker";
+import {
+  readImportInspection,
+  importStorage,
+  type ImportStorage,
+} from "./import-storage";
+import {
+  createImportUploadSession,
+  uploadLocalImport,
+  finalizeImportUpload,
+} from "./import-uploads";
+import { sha256 } from "./storage/object-store";
 import {
   IMPORT_LIMITS,
-  InspectedWorkbook,
   ValidateImportCommand,
   type ImportIssue,
 } from "../../../packages/contracts/src/import";
@@ -43,11 +51,8 @@ export interface ImportBatch {
   expires_at: Date;
   version: number;
   validation_duration_ms: number | null;
+  validation_request: unknown;
   commit_result: import("./import-commit").ImportCommitResult | null;
-}
-function inspectionPath(id: string) {
-  z.uuid().parse(id);
-  return resolve(landWorkspace(), "work/imports", `${id}.json`);
 }
 export async function uploadImport(
   actor: Actor,
@@ -55,6 +60,13 @@ export async function uploadImport(
   connection = database(),
 ) {
   requirePermission(actor, "import");
+  const storage = importStorage();
+  if (storage.driver !== "local")
+    throw new AppError(
+      "DIRECT_UPLOAD_REQUIRED",
+      409,
+      "Hãy tạo phiên upload trực tiếp.",
+    );
   z.uuid().parse(file.sourceId);
   if (
     // File names may never contain control characters or path separators.
@@ -74,65 +86,34 @@ export async function uploadImport(
       413,
       "Workbook vượt giới hạn 8 MiB.",
     );
-  const source = await connection.query(
-    "SELECT id FROM sources WHERE id=$1 AND status<>'DISABLED' AND archived_at IS NULL",
-    [file.sourceId],
+  const { id } = await createImportUploadSession(
+    actor,
+    {
+      requestId: randomUUID(),
+      sourceId: file.sourceId,
+      name: file.name,
+      mime: file.mime,
+      size: file.bytes.length,
+      sha256: sha256(file.bytes),
+    },
+    connection,
+    storage,
   );
-  if (!source.rowCount)
-    throw new AppError("INVALID_SOURCE", 400, "Nguồn không khả dụng.");
-  const recent = (
-    await connection.query<{ count: number }>(
-      "SELECT count(*)::int AS count FROM import_batches WHERE uploaded_by=$1 AND uploaded_at>now()-interval '1 hour'",
-      [actor.id],
-    )
-  ).rows[0]!.count;
-  if (recent >= 20)
-    throw new AppError(
-      "IMPORT_RATE_LIMIT",
-      429,
-      "Đã đạt giới hạn 20 workbook/giờ.",
-    );
-  const workbook = await inspectWorkbookIsolated(file.bytes),
-    id = randomUUID(),
-    path = inspectionPath(id);
-  await mkdir(resolve(landWorkspace(), "work/imports"), {
-    recursive: true,
-    mode: 0o700,
-  });
-  // Retain only sanitized eligible cells. Original bytes (including account sheets) are hashed, then discarded.
-  await writeFile(path, JSON.stringify(workbook), {
-    encoding: "utf8",
-    mode: 0o600,
-    flag: "wx",
-  });
-  try {
-    await transaction(async (client) => {
-      await client.query(
-        "INSERT INTO import_batches(id,source_id,file_name,file_hash,storage_key,uploaded_by) VALUES($1,$2,$3,$4,$5,$6)",
-        [
-          id,
-          file.sourceId,
-          file.name,
-          createHash("sha256").update(file.bytes).digest("hex"),
-          id,
-          actor.id,
-        ],
-      );
-      await audit(client, actor, "IMPORT_UPLOADED", "IMPORT_BATCH", id, {
-        eligibleSheets: workbook.sheets.filter((s) => !s.blocked).length,
-        blockedSheets: workbook.sheets.filter((s) => s.blocked).length,
-      });
-    }, connection);
-  } catch (error) {
-    await unlink(path);
-    throw error;
-  }
-  return { id };
+  await uploadLocalImport(
+    actor,
+    id,
+    file.bytes,
+    file.mime,
+    connection,
+    storage,
+  );
+  return finalizeImportUpload(actor, id, connection, storage);
 }
 export async function importBatch(
   actor: Actor,
   id: string,
   connection = database(),
+  storage?: ImportStorage,
 ) {
   requirePermission(actor, "read");
   z.uuid().parse(id);
@@ -153,9 +134,7 @@ export async function importBatch(
     mapping: ReturnType<typeof suggestMapping>;
   }> = [];
   if (batch.storage_key && batch.expires_at > new Date()) {
-    const workbook = InspectedWorkbook.parse(
-      JSON.parse(await readFile(inspectionPath(batch.id), "utf8")),
-    );
+    const workbook = await readImportInspection(batch, connection, storage);
     sheets = workbook.sheets.map((s) => ({
       index: s.index,
       name: s.name,
@@ -181,17 +160,16 @@ export async function validateImport(
   id: string,
   input: unknown,
   connection = database(),
+  storage?: ImportStorage,
 ) {
   requirePermission(actor, "import");
   z.uuid().parse(id);
   const command = ValidateImportCommand.parse(input),
     started = performance.now();
-  const { batch } = await importBatch(actor, id, connection);
+  const { batch } = await importBatch(actor, id, connection, storage);
   if (batch.expires_at <= new Date() || !batch.storage_key)
     throw new AppError("IMPORT_EXPIRED", 410, "Dữ liệu staging đã hết hạn.");
-  const workbook = InspectedWorkbook.parse(
-      JSON.parse(await readFile(inspectionPath(id), "utf8")),
-    ),
+  const workbook = await readImportInspection(batch, connection, storage),
     sheet = workbook.sheets.find((s) => s.index === command.sheetIndex);
   if (!sheet || sheet.blocked)
     throw new AppError(
@@ -214,6 +192,13 @@ export async function validateImport(
         [id],
       )
     ).rows[0]!;
+    if (locked.expires_at <= new Date() || !locked.storage_key)
+      throw new AppError("IMPORT_EXPIRED", 410, "Dữ liệu staging đã hết hạn.");
+    if (
+      locked.status === "READY_FOR_REVIEW" &&
+      isDeepStrictEqual(locked.validation_request, command)
+    )
+      return;
     if (locked.version !== command.version)
       throw new AppError(
         "VERSION_CONFLICT",
@@ -376,7 +361,7 @@ export async function validateImport(
         );
     }
     await client.query(
-      "UPDATE import_batches SET status='READY_FOR_REVIEW',sheet_name=$2,column_mapping=$3,total_rows=$4,valid_rows=$5,warning_rows=$6,invalid_rows=$7,validation_duration_ms=$8,version=version+1 WHERE id=$1",
+      "UPDATE import_batches SET status='READY_FOR_REVIEW',sheet_name=$2,column_mapping=$3,total_rows=$4,valid_rows=$5,warning_rows=$6,invalid_rows=$7,validation_duration_ms=$8,version=version+1,validation_request=$9 WHERE id=$1",
       [
         id,
         sheet.name,
@@ -386,6 +371,7 @@ export async function validateImport(
         warning,
         invalid,
         Math.round(performance.now() - started),
+        command,
       ],
     );
     await audit(client, actor, "IMPORT_STAGED", "IMPORT_BATCH", id, {

@@ -163,7 +163,7 @@ describe.skipIf(!connection)("real PostgreSQL/PostGIS integration", () => {
   it("published release checksums and public asset URLs cannot be rewritten or moved", async () => {
     const source = (
       await pool.query(
-        "INSERT INTO sources(name,category,status,public_display,redistribution,derivatives) VALUES('Synthetic terrain','TERRAIN','ACTIVE','ALLOWED','ALLOWED','ALLOWED') RETURNING id",
+        "INSERT INTO sources(name,category,status,public_display,redistribution,derivatives,caching,license_reference) VALUES('Synthetic terrain','TERRAIN','ACTIVE','ALLOWED','ALLOWED','ALLOWED','ALLOWED','https://example.invalid/license') RETURNING id",
       )
     ).rows[0].id;
     const dataset = (

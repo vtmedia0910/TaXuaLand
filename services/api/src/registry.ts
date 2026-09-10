@@ -4,6 +4,7 @@ import { audit, requirePermission, type Actor } from "./auth";
 import { SourceSchema } from "../../../packages/provenance/src/index";
 import { AppError } from "./errors";
 import { importDiagnostics } from "./import-diagnostics";
+import { publishedBase } from "./published-assets";
 export async function listSources(actor: Actor) {
   requirePermission(actor, "read");
   const result = await database().query(
@@ -122,9 +123,15 @@ export async function diagnostics(actor: Actor) {
     imports: await importDiagnostics(actor),
   };
 }
-export async function publishRelease(actor: Actor, id: string) {
+export async function publishRelease(
+  actor: Actor,
+  id: string,
+  connection = database(),
+  env: Record<string, string | undefined> = process.env,
+) {
   requirePermission(actor, "configure");
   z.uuid().parse(id);
+  const base = publishedBase(env);
   return transaction(async (client) => {
     const release = (
       await client.query<{
@@ -136,10 +143,33 @@ export async function publishRelease(actor: Actor, id: string) {
         derivatives: string;
         ready: boolean;
       }>(
-        `SELECT r.id,r.dataset_id,r.qa_status,s.public_display,s.redistribution,s.derivatives,(s.status='ACTIVE' AND s.archived_at IS NULL AND r.bbox IS NOT NULL AND r.target_crs='EPSG:4326' AND (d.kind<>'TERRAIN' OR (r.vertical_datum='WGS84_ELLIPSOID' AND r.resolution IS NOT NULL)) AND EXISTS(SELECT 1 FROM dataset_assets a WHERE a.release_id=r.id AND a.zone='published' AND a.public_url IS NOT NULL AND a.checksum=r.checksum) AND EXISTS(SELECT 1 FROM pipeline_runs p WHERE p.release_id=r.id AND p.status='COMPLETED')) AS ready FROM dataset_releases r JOIN datasets d ON d.id=r.dataset_id JOIN sources s ON s.id=d.source_id WHERE r.id=$1 FOR UPDATE OF r`,
+        `SELECT r.id,r.dataset_id,r.qa_status,s.public_display,s.redistribution,s.derivatives,(s.status='ACTIVE' AND s.archived_at IS NULL AND s.caching='ALLOWED' AND s.license_reference IS NOT NULL AND r.bbox IS NOT NULL AND r.target_crs='EPSG:4326' AND (d.kind<>'TERRAIN' OR (r.vertical_datum='WGS84_ELLIPSOID' AND r.resolution IS NOT NULL)) AND EXISTS(SELECT 1 FROM dataset_assets a WHERE a.release_id=r.id AND a.zone='published' AND a.public_url IS NOT NULL AND a.checksum=r.checksum) AND EXISTS(SELECT 1 FROM pipeline_runs p WHERE p.release_id=r.id AND p.status='COMPLETED')) AS ready FROM dataset_releases r JOIN datasets d ON d.id=r.dataset_id JOIN sources s ON s.id=d.source_id WHERE r.id=$1 FOR UPDATE OF r`,
         [id],
       )
     ).rows[0];
+    if (
+      base &&
+      !(
+        await client.query(
+          "SELECT release_id FROM spatial_object_deliveries WHERE release_id=$1 AND public_base_url=$2",
+          [id, base],
+        )
+      ).rowCount
+    )
+      throw new AppError(
+        "RELEASE_DELIVERY_REQUIRED",
+        409,
+        "Release cần được kiểm tra object delivery trước khi publish.",
+      );
+    if (
+      !(
+        await client.query(
+          "SELECT s.id FROM sources s JOIN datasets d ON d.source_id=s.id JOIN dataset_releases r ON r.dataset_id=d.id WHERE r.id=$1 AND (s.provider_id IS NULL OR EXISTS(SELECT 1 FROM integration_providers p WHERE p.id=s.provider_id AND p.enabled AND NOT p.kill_switch))",
+          [id],
+        )
+      ).rowCount
+    )
+      throw new AppError("RELEASE_GATE", 409, "Provider không khả dụng.");
     if (
       !release ||
       !release.ready ||
@@ -171,5 +201,5 @@ export async function publishRelease(actor: Actor, id: string) {
       "DATASET_RELEASE",
       id,
     );
-  });
+  }, connection);
 }

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { AppError } from "./errors";
 import { errorCategory, safeRoute } from "./observability";
+import { deploymentOrigin } from "../../../packages/config/src/deployment";
 import {
   SESSION_COOKIE,
   sessionActor,
@@ -17,14 +18,17 @@ export function cookieToken(request: Request): string | undefined {
     ?.slice(SESSION_COOKIE.length + 1);
 }
 export function checkOrigin(request: Request): void {
-  const configured = process.env.SERVER_ORIGIN;
-  if (!configured)
+  let configured: string;
+  try {
+    configured = deploymentOrigin(process.env);
+  } catch {
     throw new AppError(
       "CONFIGURATION_REQUIRED",
       503,
       "Dịch vụ chưa được cấu hình.",
     );
-  if (request.headers.get("origin") !== new URL(configured).origin)
+  }
+  if (request.headers.get("origin") !== configured)
     throw new AppError("INVALID_ORIGIN", 403, "Nguồn yêu cầu không hợp lệ.");
 }
 export async function jsonInput(

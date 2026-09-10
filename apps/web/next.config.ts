@@ -1,9 +1,20 @@
 import type { NextConfig } from "next";
 import TerserPlugin from "terser-webpack-plugin";
 import { resolve } from "node:path";
+import { importTrace } from "../../infra/import-trace.ts";
 const config: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  outputFileTracingRoot: resolve(process.cwd(), "../.."),
+  outputFileTracingExcludes: {
+    "/*": [
+      "../../work/**/*",
+      "../../.env*",
+      ".env*",
+      "public/spatial/**/*",
+      "../../.git/**/*",
+    ],
+  },
   async headers() {
     return [
       {
@@ -53,4 +64,13 @@ const config: NextConfig = {
     return config;
   },
 };
-export default config;
+export default async function nextConfig() {
+  const parser = (await importTrace()).map((path) => `../../${path}`);
+  return {
+    ...config,
+    outputFileTracingIncludes: {
+      "/api/admin/imports": parser,
+      "/api/admin/imports/*/finalize-upload": parser,
+    },
+  };
+}

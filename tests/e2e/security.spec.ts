@@ -43,6 +43,8 @@ test("all Admin routes require auth; role changes enforce narrow mutation permis
     ["categories", "edit"],
     ["sources", "configure"],
     ["imports", "import"],
+    ["imports/upload-session", "import"],
+    [`imports/${id}/finalize-upload`, "import"],
     [`imports/${id}/validate`, "import"],
     [`imports/${id}/commit`, "import"],
     [`places/${id}/verify`, "verify"],
@@ -106,6 +108,20 @@ test("all Admin routes require auth; role changes enforce narrow mutation permis
         { path, id },
       );
       expect(status, `${role}: ${path}`).toBe(403);
+    }
+    if (!permissions.has("import")) {
+      expect(
+        await page.evaluate(
+          async (id) =>
+            (
+              await fetch(`/api/admin/imports/${id}/upload`, {
+                method: "PUT",
+                body: "not-xlsx",
+              })
+            ).status,
+          id,
+        ),
+      ).toBe(403);
     }
   }
   await pool.query("UPDATE admin_users SET disabled=true WHERE id=$1", [user]);
@@ -176,6 +192,27 @@ test("runtime role cannot change credentials or erase audit, and upload boundari
     data: {},
   });
   expect(crossOrigin.status()).toBe(403);
+  for (const path of [
+    "imports/upload-session",
+    `imports/${randomUUID()}/finalize-upload`,
+  ]) {
+    expect(
+      (
+        await page.request.post(`/api/admin/${path}`, {
+          headers: { Origin: "https://untrusted.vercel.app" },
+          data: {},
+        })
+      ).status(),
+    ).toBe(403);
+  }
+  expect(
+    (
+      await page.request.put(`/api/admin/imports/${randomUUID()}/upload`, {
+        headers: { Origin: "https://attacker.invalid" },
+        data: "invalid",
+      })
+    ).status(),
+  ).toBe(403);
 });
 test("lazy engine download failure preserves public search and details", async ({
   page,
