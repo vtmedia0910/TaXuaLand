@@ -68,13 +68,13 @@ MERGED THROUGH PR #2
 Phase 1
 Tà Xùa 3D
 NOT STARTED
-NOT AUTHORIZED YET
-SPECIFICATION UNDER OWNER REVIEW
+SPECIFICATION APPROVED
+IMPLEMENTATION AUTHORIZATION EFFECTIVE ON PR #4 MERGE
 ```
 
-Phase 1 must not begin merely because its visual specification already exists.
+The owner approved the Phase 1 specification and its four scope/data-readiness decisions on 2026-09-11. No Phase 1 implementation belongs in PR #4; implementation begins only after the approved specification passes required CI and is merged.
 
-The current architecture freeze explicitly requires a dedicated Phase 1 specification and explicit owner approval before Phase 1 implementation.
+The current architecture freeze remains in force. The approved specification extends it without reopening the frozen authority, publication, verification, provenance, security, or provider boundaries.
 
 ---
 
@@ -494,13 +494,13 @@ PHASE 0.5 PR
 #2 — MERGED
 
 CURRENT PHASE
-Phase 1 specification under owner review
+Phase 1 specification approved; implementation not started
 
 PRIMARY CURRENT GOAL
-Review and approve or revise the dedicated Phase 1 specification
+Merge the approved Phase 1 specification through PR #4 without implementation code
 
 PHASE 1
-NOT STARTED / NOT YET AUTHORIZED
+NOT STARTED / AUTHORIZATION EFFECTIVE ON PR #4 MERGE
 
 ARCHITECTURE
 FROZEN
@@ -512,5 +512,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-Owner reviews the draft specification; do not start implementation without explicit approval.
+After PR #4 passes required CI and merges, begin Slice 1A on a separate implementation branch.
 ```

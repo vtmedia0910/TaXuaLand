@@ -1,10 +1,12 @@
 # Phase 1 — TÀ XÙA 3D
 
-Status: **DRAFT — OWNER APPROVAL REQUIRED**
+Status: **APPROVED**
+
+Owner approval recorded: **2026-09-11**
 
 Baseline: `e08b5aa5919709c639e7bd81120b10feffd85b9d`
 
-Implementation authorization: **NOT GRANTED**
+Implementation authorization: **GRANTED UPON MERGE OF PR #4**
 
 This specification extends the accepted Phase 0/0.5 architecture. It does not reopen the core engine, data authority, publication lifecycle, product boundaries, or provider/secrets boundaries.
 
@@ -52,7 +54,7 @@ This value stands independently of future Property, AI, Brokerage, mobility, or 
 - Phase 0.5 provider acceptance is PASS; that transport evidence does not certify any Phase 1 dataset, licence, or accuracy.
 - The agent-workflow migration is merged through PR #3.
 - This specification is drafted from baseline `e08b5aa5919709c639e7bd81120b10feffd85b9d`.
-- Phase 1 implementation remains blocked until the owner explicitly approves this specification.
+- Owner approval was granted on 2026-09-11. Implementation remains blocked until this approved revision passes required CI and is merged through PR #4.
 
 ADR assessment: **none required for the scope as written**. Any implementation discovery that requires changing a frozen decision remains **ADR REQUIRED** and outside this specification until separately approved.
 
@@ -716,42 +718,40 @@ Phase 1 must fail safely without rewriting published spatial truth.
 
 ---
 
-## 26. Open questions
+## 26. Owner decisions
 
-These questions require owner/data/provider decisions; current repository contracts do not answer them.
+The owner approved the following Phase 1 defaults on 2026-09-11. They are binding scope and data-readiness decisions for the initial launch; they do not bypass existing source, rights, provenance, accuracy, release, delivery, publication, or provider gates.
 
-### Q1 — What exact geographic coverage is the Phase 1 public promise?
+### Decision 1 — Initial geographic coverage
 
 - **Why it matters:** The current operational AOI and representative terrain coverage are not official administrative boundaries and may not equal the intended public region.
-- **Recommended default:** Launch with the current bounded operational coverage that has eligible releases, label it as coverage rather than a legal boundary, and expand only through successor releases.
-- **Consequence of deferring:** Code and QA can proceed against fixtures/current coverage, but public launch copy and completeness acceptance remain OPEN.
+- **Approved default:** Use the current bounded operational coverage for the initial Phase 1 launch. Present it as product/data coverage, not as an official administrative or legal boundary. Expansion requires reviewed successor data/releases.
 
-### Q2 — Which imagery source and licence will Phase 1 use?
+### Decision 2 — Imagery fallback
 
 - **Why it matters:** The repository currently has only a neutral grid; imagery rights, freshness, coverage, format, and cost are unresolved.
-- **Recommended default:** Keep the neutral grid until one source passes registration, rights review, reproducible processing, Dataset/Release, and public delivery gates. Do not bind to a vendor in the client.
-- **Consequence of deferring:** Phase 1 can deliver terrain/roads/Places, but the imagery layer remains unavailable and must not be claimed complete.
+- **Approved default:** Keep `NEUTRAL_GRID` as the honest fallback until a real imagery source passes source registration, licence/rights review, provenance, processing, Dataset/Release, delivery, and publication gates. Do not bind the browser to an arbitrary imagery vendor.
 
-### Q3 — Which exact terrain and road releases are approved for Phase 1 public use?
+### Decision 3 — Terrain and road releases
 
 - **Why it matters:** The established Copernicus-derived terrain and pinned OSM road releases prove the current pipeline, but their exact deployed release IDs, coverage fitness, current rights, and desired accuracy claims require explicit selection.
-- **Recommended default:** Reuse the existing eligible immutable releases for the bounded first launch, retain UNKNOWN local/field accuracy, and create successor releases only when source/coverage evidence changes.
-- **Consequence of deferring:** Code integration can be tested, but DATA READY and provider/browser acceptance remain OPEN.
+- **Approved default:** Reuse the existing eligible immutable terrain and road releases for the bounded first launch where their current rights and provider gates remain valid. Keep local/field accuracy `UNKNOWN` unless suitable evidence supports a stronger claim. Record and approve exact release IDs at the DATA READY/provider acceptance gate.
 
-### Q4 — Are villages/geographic labels modeled only as published Places in Phase 1?
+### Decision 4 — Villages and geographic labels
 
 - **Why it matters:** No separate authoritative geographic-label source/contract is established, while adding an external labels service would create an unapproved authority path.
-- **Recommended default:** Represent only eligible village/geographic entries as existing Places/categories. Add a separate dataset only after a source and real product need are approved.
-- **Consequence of deferring:** No separate village label layer is shipped; the map remains honest but may have sparse regional labels.
+- **Approved default:** Represent villages/geographic labels only through eligible published LAND Places/categories. Do not introduce a separate external geographic-label authority in Phase 1.
+
+These decisions do not independently approve a specific imagery dataset or licence, unsupported accuracy claims, provider mutations, or any Phase 2, Property, AI, or Brokerage scope.
 
 ---
 
-## 27. Owner approval gate
+## 27. Owner approval and implementation gate
 
-Approval must confirm that this scope, its open-question decisions/defaults, and its evidence boundaries are acceptable. Approval of the specification does not approve specific datasets, licences, accuracy claims, or provider mutations that still have separate gates.
+The owner approved this specification and the four decisions in Section 26 on 2026-09-11. Approval of the specification does not approve specific datasets, licences, accuracy claims, or provider mutations that still have separate gates. PR #4 remains documentation-only.
 
 ```text
-PHASE 1 IMPLEMENTATION AUTHORIZATION: NOT GRANTED
+PHASE 1 IMPLEMENTATION AUTHORIZATION: GRANTED UPON MERGE OF PR #4
 ```
 
-Implementation starts only after explicit owner approval of this specification.
+Implementation starts only after this approved revision passes required CI and is merged through PR #4. After that merge, the first authorized implementation work is Slice 1A on a separate implementation branch.
