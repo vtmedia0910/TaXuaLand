@@ -161,7 +161,7 @@ Mobile prioritizes the map viewport, search, selection, layer access, and Place 
 | Terrain | Registered `sources` row; `datasets.kind='TERRAIN'`; one applicable immutable published `dataset_releases` row. The current established processing source is the registered Copernicus GLO-30-derived LAND release; the exact Phase 1 release must be selected explicitly. | Published `LAND_HEIGHTMAP_V1` manifest plus checksum-verified height tiles, resolved only through the current delivery receipt and published asset origin. Current `ViewerConfig` carries URL, release version, and manifest checksum; Phase 1 may add a public-safe layer descriptor for trust metadata. | Existing bounded Cesium `TerrainProvider`; ellipsoid only as a labeled fallback. | Manifest exposes source, licence, attribution, datum, resolution, liability, and `verificationStatus: UNKNOWN`. Missing accuracy/control evidence remains UNKNOWN. Current source rights or provider kill switch can suppress the layer. |
 | Imagery | `sources` + `datasets.kind='IMAGERY'` + immutable published release when one is lawfully selected. **OPEN — DATA SOURCE REQUIRED.** | Current public contract is only `imagery: 'NEUTRAL_GRID'`; no published imagery release is integrated. Phase 1 needs the smallest extension of the existing published asset/release path and a public-safe layer descriptor. | A Cesium imagery provider created only from the approved release contract; the neutral grid is a clearly labeled fallback, not imagery. | Expose source, licence/attribution, acquisition/freshness date when known, coverage, and UNKNOWN otherwise. A reachable tile endpoint is insufficient authority. |
 | Roads | Registered road source; `datasets.kind='ROADS'`; immutable published release; corresponding `road_segments` retain PostGIS geometry/source records. The established baseline is the pinned OSM snapshot release, subject to exact release selection and current rights. | Released GeoJSON resolved through the current delivery receipt. Current `ViewerConfig` exposes URL and release version; Phase 1 should expose a public-safe source/freshness descriptor without internal provider fields. | Existing ground-clamped Cesium `GeoJsonDataSource`. | Attribution/licence and source timestamp must remain visible. Segment verification defaults to UNKNOWN. Geometry does not establish safety, access, passability, or suitability. Revoked applicable rights/provider disablement suppresses output. |
-| Villages/geographic labels | Prefer existing published Places with an approved village/geographic category. If a separate geographic-label dataset is required: **OPEN — DATA SOURCE REQUIRED.** | Existing `PublicPlaceDTO`/map-marker projection when modeled as Places. No external label service becomes authority by convenience. | Place marker/label with density rules; no invented building geometry. | Use Place source/location trust and freshness. Unpublished or ineligible entries do not render. Absence is empty/UNKNOWN, not proof a village does not exist. |
+| Villages/geographic labels | Eligible published LAND Places with an approved village/geographic category. Phase 1 has no separate geographic-label authority. | Existing `PublicPlaceDTO`/map-marker projection from the Place model. | Place marker/label with density rules; no invented building geometry. | Use Place source/location trust and freshness. Unpublished or ineligible entries do not render. Absence is empty/UNKNOWN, not proof a village does not exist. |
 | Places | `places`, current `place_geometries`, source records/sources, categories, and independent verification/publication state in PostGIS. | Existing `PublicPlaceDTO`, `PublicPlaceDetailDTO`, and public list/detail endpoints. Phase 1 may add a narrower viewport marker DTO derived from the same model; it must not create a parallel Place model. | Ground-clamped marker/entity, cluster, selected label, and fly-to target. | Show content source trust and location trust separately. Published is not Verified. Expired/UNKNOWN remain explicit. Provider kill switch, source disablement/public-display revocation, archive/review state, or publication removal suppresses public output. |
 
 All objects follow:
@@ -378,7 +378,7 @@ Camera behavior is deterministic product behavior; it does not change spatial tr
 
 ## 13. Layer model
 
-Phase 1 has four public layer groups. Villages/geographic labels are Places unless a later approved source requires a separate layer.
+Phase 1 has four public layer groups. Villages/geographic labels are represented only as eligible published LAND Places/categories; a separate geographic-label source or layer is outside Phase 1.
 
 | Layer | Availability | Default visibility | Loading and source information | Failure isolation |
 | --- | --- | --- | --- | --- |
@@ -558,7 +558,7 @@ Operational dashboards use aggregate health/error/timing categories and bounded 
 
 ## 21. Implementation slices
 
-The slices extend existing code. They are not authorization to implement before owner approval.
+The slices extend existing code. They are not authorization to implement before this approved revision passes required CI and is merged through PR #4.
 
 | Slice | User-visible outcome | Likely files/components | Backend/domain impact | Required tests and acceptance gate | Explicit exclusions |
 | --- | --- | --- | --- | --- | --- |
@@ -655,8 +655,7 @@ For every enabled layer, the exact source, rights, provenance, CRS/datum, covera
 Current gaps:
 
 - imagery: **OPEN — DATA SOURCE REQUIRED**;
-- villages/geographic labels beyond eligible Places: **OPEN — DATA SOURCE REQUIRED**;
-- exact Phase 1 terrain and road release selection: **OPEN — OWNER/DATA DECISION**;
+- exact Phase 1 terrain and road release IDs: **PENDING — DATA READY/PROVIDER ACCEPTANCE GATE**;
 - field/local absolute terrain accuracy: **UNKNOWN** until suitable control evidence exists.
 
 ### PROVIDER READY

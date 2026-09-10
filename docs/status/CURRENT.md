@@ -281,8 +281,8 @@ However:
 
 ```text
 PHASE 1 MUST NOT START
-until Phase 0.5 is closed and merged
-and the dedicated Phase 1 specification is approved.
+until the approved dedicated Phase 1 specification
+passes required CI and is merged through PR #4.
 ```
 
 Do not use the future visual board as authorization to implement Property, AI, full viewshed intelligence, or travel-commerce routing.
@@ -428,7 +428,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-Review the draft `docs/PHASE_1_TA_XUA_3D.md` and resolve its owner/data decisions. Phase 1 implementation may begin only after explicit owner approval of that specification.
+Merge the approved `docs/PHASE_1_TA_XUA_3D.md` through PR #4 after required CI passes. Then begin Slice 1A on a separate implementation branch.
 
 ---
 
