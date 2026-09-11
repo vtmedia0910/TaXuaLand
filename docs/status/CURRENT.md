@@ -72,12 +72,12 @@ Tà Xùa 3D
 IN PROGRESS
 SPECIFICATION APPROVED
 PR #4 MERGED
-ACTIVE SLICE: 1A — PUBLIC 3D SHELL + REGIONAL CAMERA + DEGRADED-STATE BASELINE
+SLICE 1A: COMPLETE — PR #5 APPROVED FOR MERGE
 ```
 
 The owner approved the Phase 1 specification and its four scope/data-readiness decisions on 2026-09-11. PR #4 merged the documentation-only specification; Slice 1A is the first authorized implementation work.
 
-PR #5 remains open and unmerged. Owner screenshot review rejected the earlier visual-fidelity claim while retaining functional, architecture, and readiness PASS. The current local correction brings `/map` toward the literal Series 00/01/08 silhouette: compact desktop product rail, floating discovery search, map-native controls, contextual light panel, and a mobile map-first shell with bottom navigation and state-sized bottom sheets. The neutral reference grid remains distinct from unavailable approved imagery; no terrain, imagery, road, Place, Property, or AI data was invented. Final local validation passed with `pnpm check`, the isolated 10-test core E2E suite, observed 1440×900 and 390×844 viewer frames, `git diff --check`, and the repository secret scan. Required remote CI must be re-checked on the pushed correction head before owner screenshot review.
+Owner final screenshot review passed for Series 00, 01, and 08, and required remote CI passed on the reviewed PR #5 head. Functional, visual, scope, architecture, and E2E review are PASS; Slice 1A is complete and PR #5 is approved for merge. The neutral reference grid remains the honest fallback: Slice 1A does not imply that any terrain or imagery source/release is approved. After merge, the next authorized work is Slice 1B — published terrain, subject to its existing source, rights, Dataset/Release, provider, and accuracy gates.
 
 The current architecture freeze remains in force. The approved specification extends it without reopening the frozen authority, publication, verification, provenance, security, or provider boundaries.
 
@@ -432,7 +432,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-Validate and push the final Slice 1A visual-fidelity correction to PR #5, wait for required CI, and stop with PR #5 open for owner screenshot review before merge.
+After PR #5 merges, proceed only through a separate Slice 1B change for published terrain; do not infer approved terrain or imagery from the completed Slice 1A shell.
 
 ---
 
@@ -498,13 +498,13 @@ PHASE 0.5 PR
 #2 — MERGED
 
 CURRENT PHASE
-Phase 1 in progress — Slice 1A
+Phase 1 in progress — Slice 1A complete / PR #5 approved for merge
 
 PRIMARY CURRENT GOAL
-Deliver the public 3D shell, regional camera and degraded-state baseline
+Merge the approved Slice 1A public 3D shell baseline
 
 PHASE 1
-IN PROGRESS / ACTIVE SLICE 1A
+IN PROGRESS / SLICE 1A COMPLETE
 
 ARCHITECTURE
 FROZEN
@@ -516,5 +516,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-Validate and push the final Slice 1A visual-fidelity correction to PR #5, then wait for required CI without merging.
+After PR #5 merge: Slice 1B — published terrain, through a separate gated change.
 ```
