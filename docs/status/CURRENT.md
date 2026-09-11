@@ -74,7 +74,7 @@ SPECIFICATION APPROVED
 PR #4 MERGED
 SLICE 1A: COMPLETE — PR #5 MERGED
 ACTIVE SLICE: 1B — PUBLISHED TERRAIN
-SLICE 1B: TEMPORARY RUNTIME PATH READY FOR REVIEW / NOT PUBLISHED
+SLICE 1B: TEMPORARY RUNTIME PATH READY FOR FINAL REVIEW / NOT PUBLISHED
 PRODUCTION TERRAIN: DELIVERED / APPROVED / NOT PUBLISHED
 ```
 
@@ -88,7 +88,9 @@ The published R2 bucket contains 342/342 verified immutable objects: one manifes
 
 The owner accepts the existing Cloudflare R2 `r2.dev` origin as temporary Phase 1B public infrastructure through non-secret `PUBLIC_ASSET_BASE_URL` configuration. It is not the final production CDN. A custom asset domain is deferred; migration must reuse the same immutable Release/bytes with delivery/readback and a second origin-specific receipt. No terrain rebuild, new Dataset, or application rewrite is required.
 
-The Slice 1B change adds the missing authenticated, same-origin Admin Release publication endpoint and the minimal APPROVED-only Dataset control. It delegates UUID, configure permission, delivery, status, rights, provider and audit enforcement to the existing `publishRelease()` service. `pnpm check` passed with 143 tests plus build and secret scan; `pnpm test:e2e:core` passed all 10 browser tests. No production Release or provider configuration was mutated. The execution environment exposes local `.git` as read-only, so delivery uses an isolated exact-path Git index for the dedicated remote feature branch without touching unrelated workspace data.
+The Slice 1B change adds the missing authenticated, same-origin Admin Release publication endpoint and the minimal APPROVED-only Dataset control. It delegates UUID, configure permission, delivery, status, rights, provider and audit enforcement to the existing `publishRelease()` service. `pnpm check` passed with 143 tests plus build and secret scan; `pnpm test:e2e:core` passed all 10 browser tests. No production Release or provider configuration was mutated. The execution environment exposes local `.git` as read-only, so delivery uses an isolated exact-path commit payload for the dedicated remote feature branch without touching unrelated workspace data.
+
+PR #8 is open and unmerged. Its implementation head passed the required GitHub `check` and `e2e-core` jobs and Vercel Preview. These results establish code/runtime-path readiness only; production terrain publication and browser validation remain separately gated.
 
 The current architecture freeze remains in force. The approved specification extends it without reopening the frozen authority, publication, verification, provenance, security, or provider boundaries.
 
@@ -299,7 +301,7 @@ Current implementation state is bounded to:
 Slice 1A — COMPLETE / MERGED
 Public 3D shell + regional camera + degraded-state baseline
 
-Slice 1B — TEMPORARY RUNTIME PATH READY FOR REVIEW / NOT PUBLISHED
+Slice 1B — TEMPORARY RUNTIME PATH READY FOR FINAL REVIEW / NOT PUBLISHED
 Production Release delivered and APPROVED; publication and browser terrain validation remain open
 ```
 
@@ -446,7 +448,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-Wait for CI and Vercel Preview on the dedicated `feat/phase-1b-published-terrain-runtime` PR. After review/merge, set the Vercel runtime's non-secret `PUBLIC_ASSET_BASE_URL` to the exact temporary receipt origin, separately authorize publishing `TX-DEM-2026-001`, and validate real terrain in the deployed browser. Imagery remains `UNAVAILABLE`; do not start Slice 1C.
+Complete owner final review of PR #8 without auto-merging. After review/merge, set the Vercel runtime's non-secret `PUBLIC_ASSET_BASE_URL` to the exact temporary receipt origin, separately authorize publishing `TX-DEM-2026-001`, and validate real terrain in the deployed browser. Imagery remains `UNAVAILABLE`; do not start Slice 1C.
 
 ---
 
@@ -530,5 +532,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-Wait for feature-branch CI and Vercel Preview, then separately authorize temporary r2.dev publication and browser validation; do not start Slice 1C.
+Owner final review of PR #8, then separately authorize temporary r2.dev publication and browser validation after merge; do not start Slice 1C.
 ```
