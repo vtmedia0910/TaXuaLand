@@ -24,7 +24,7 @@ export function initialLayerReadiness(
 ): ViewerLayerReadiness {
   return {
     terrain: config.terrainUrl ? "INITIALIZING" : "UNAVAILABLE",
-    imagery: "INITIALIZING",
+    imagery: "UNAVAILABLE",
     roads: config.roadsUrl ? "INITIALIZING" : "UNAVAILABLE",
     places: "INITIALIZING",
   };

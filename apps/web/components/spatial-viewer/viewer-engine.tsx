@@ -21,7 +21,7 @@ declare global {
 }
 const layers: { id: LayerId; label: string }[] = [
   { id: "terrain", label: "Địa hình" },
-  { id: "imagery", label: "Lưới nền" },
+  { id: "imagery", label: "Ảnh nền" },
   { id: "roads", label: "Đường" },
   { id: "places", label: "Địa điểm" },
 ];
@@ -173,7 +173,6 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         }),
       );
       imagery.show = true;
-      setLayer("imagery", "READY");
       terrain.current = v.terrainProvider;
       v.scene.screenSpaceCameraController.minimumZoomDistance =
         props.config.minimumCameraHeight;
@@ -413,7 +412,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         }
       } else
         setNotice(
-          "Chưa có terrain release được duyệt. Lưới nền không mô tả địa hình thực.",
+          "Chưa có terrain release được duyệt. Lưới tham chiếu không mô tả địa hình thực.",
         );
       if (props.config.roadsUrl) {
         try {
@@ -617,16 +616,19 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           },
         });
       if (frame.durationSeconds !== 0)
-        window.setTimeout(() => {
-          if (cameraTransition.current !== transition || v.isDestroyed())
-            return;
-          cameraTransition.current++;
-          v.camera.cancelFlight();
-          v.camera.setView(view);
-          cameraMoving.current = false;
-          setCameraComplete(true);
-          v.scene.requestRender();
-        }, frame.durationSeconds * 1000 + 250);
+        window.setTimeout(
+          () => {
+            if (cameraTransition.current !== transition || v.isDestroyed())
+              return;
+            cameraTransition.current++;
+            v.camera.cancelFlight();
+            v.camera.setView(view);
+            cameraMoving.current = false;
+            setCameraComplete(true);
+            v.scene.requestRender();
+          },
+          frame.durationSeconds * 1000 + 250,
+        );
     }
   };
   return (
@@ -678,30 +680,46 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           </div>
         ) : (
           <>
-            <div className="map-tools" aria-label="Lớp bản đồ">
-              {layers.map((layer) => (
-                <label key={layer.id}>
-                  <input
-                    type="checkbox"
-                    checked={
-                      visible[layer.id] &&
-                      layerReadiness[layer.id] !== "UNAVAILABLE" &&
-                      layerReadiness[layer.id] !== "FAILED"
-                    }
-                    disabled={
-                      layerReadiness[layer.id] === "UNAVAILABLE" ||
-                      layerReadiness[layer.id] === "FAILED"
-                    }
-                    onChange={(event) =>
-                      setVisible((v) => ({
-                        ...v,
-                        [layer.id]: event.target.checked,
-                      }))
-                    }
-                  />
-                  {layer.label}
-                </label>
-              ))}
+            <div className="map-tools" aria-label="Điều khiển bản đồ">
+              <span className="map-tools-title">Hiển thị</span>
+              <label className="map-tool-base">
+                <input
+                  type="checkbox"
+                  checked={visible.imagery}
+                  onChange={(event) =>
+                    setVisible((value) => ({
+                      ...value,
+                      imagery: event.target.checked,
+                    }))
+                  }
+                />
+                Lưới tham chiếu
+              </label>
+              {layers
+                .filter((layer) => layer.id !== "imagery")
+                .map((layer) => (
+                  <label key={layer.id}>
+                    <input
+                      type="checkbox"
+                      checked={
+                        visible[layer.id] &&
+                        layerReadiness[layer.id] !== "UNAVAILABLE" &&
+                        layerReadiness[layer.id] !== "FAILED"
+                      }
+                      disabled={
+                        layerReadiness[layer.id] === "UNAVAILABLE" ||
+                        layerReadiness[layer.id] === "FAILED"
+                      }
+                      onChange={(event) =>
+                        setVisible((v) => ({
+                          ...v,
+                          [layer.id]: event.target.checked,
+                        }))
+                      }
+                    />
+                    {layer.label}
+                  </label>
+                ))}
               <button type="button" onClick={() => reset()}>
                 Đặt lại góc nhìn
               </button>

@@ -77,6 +77,8 @@ ACTIVE SLICE: 1A — PUBLIC 3D SHELL + REGIONAL CAMERA + DEGRADED-STATE BASELINE
 
 The owner approved the Phase 1 specification and its four scope/data-readiness decisions on 2026-09-11. PR #4 merged the documentation-only specification; Slice 1A is the first authorized implementation work.
 
+PR #5 remains open and unmerged. Its current local Slice 1A amendment converges `/map` toward the canonical map-first desktop and mobile experience while keeping the neutral reference grid distinct from approved imagery. Local validation completed with `pnpm check`, the isolated 10-test core E2E suite, focused normal/degraded/reduced-motion viewer checks, and desktop/mobile visual inspection. Required remote CI must be re-checked after the amendment is pushed.
+
 The current architecture freeze remains in force. The approved specification extends it without reopening the frozen authority, publication, verification, provenance, security, or provider boundaries.
 
 ---
@@ -256,7 +258,7 @@ Visual sample values remain illustrative only.
 
 ## 9. Phase 1 boundary
 
-Phase 1 is expected to become:
+Phase 1 is:
 
 ```text
 Tà Xùa 3D
@@ -280,21 +282,20 @@ Primary visual:
 01-public-map-3d-experience-v2.png
 ```
 
-However:
+Current implementation is bounded to:
 
 ```text
-PHASE 1 MUST NOT START
-until the approved dedicated Phase 1 specification
-passes required CI and is merged through PR #4.
+Slice 1A
+Public 3D shell + regional camera + degraded-state baseline
 ```
 
-Do not use the future visual board as authorization to implement Property, AI, full viewshed intelligence, or travel-commerce routing.
+The approved specification is merged through PR #4. PR #5 must remain limited to Slice 1A until its own review and merge; do not use the future visual board as authorization to implement Property, AI, full viewshed intelligence, or travel-commerce routing.
 
 ---
 
 ## 10. Current operational risks
 
-Keep these risks visible while preparing the Phase 1 specification:
+Keep these risks visible during the current Phase 1 slice:
 
 - published operator credentials may accidentally enter web runtime;
 - private/public storage authority may be blurred;
@@ -305,7 +306,7 @@ Keep these risks visible while preparing the Phase 1 specification:
 - Property/AI scope may leak into the Phase 1 specification;
 - broad refactoring before an approved specification may create unnecessary risk.
 
-Prefer a bounded specification over unrelated cleanup.
+Prefer the bounded approved slice over unrelated cleanup.
 
 ---
 
@@ -431,7 +432,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-Complete Slice 1A validation and deliver it through a dedicated PR, then stop for final review before merge.
+Push the validated Slice 1A visual-convergence amendment to PR #5, wait for required CI, and stop with PR #5 open for final review before merge.
 
 ---
 
@@ -515,5 +516,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-Complete Slice 1A validation and open its dedicated PR for final review.
+Push the validated Slice 1A amendment to PR #5 and wait for required CI without merging.
 ```

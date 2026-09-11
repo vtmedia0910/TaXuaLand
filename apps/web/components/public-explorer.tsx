@@ -122,24 +122,37 @@ function Explorer({ config, categories, initialSlug }: Props) {
         className="explorer-panel"
         aria-label="Tìm kiếm và thông tin địa điểm"
       >
+        <span className="sheet-handle" aria-hidden="true" />
+        <header className="explorer-panel-heading">
+          <p className="explorer-kicker">KHÁM PHÁ KHÔNG GIAN</p>
+          <h2>TÀ XÙA</h2>
+          <p>Vùng phủ sản phẩm hiện tại · không phải ranh giới hành chính.</p>
+        </header>
         <form
+          className="explorer-search-form"
           onSubmit={(event) => {
             event.preventDefault();
             setQuery(draft);
             setOffset(0);
           }}
         >
-          <label>
-            Tìm địa điểm
-            <input
-              type="search"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              maxLength={120}
-              placeholder="Tên địa điểm…"
-            />
-          </label>
-          <label>
+          <div className="explorer-search-field">
+            <label htmlFor="public-place-search">Tìm địa điểm</label>
+            <span className="explorer-search-control">
+              <input
+                id="public-place-search"
+                type="search"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                maxLength={120}
+                placeholder="Tên địa điểm, khu vực…"
+              />
+              <button type="submit" aria-label="Tìm kiếm">
+                Tìm
+              </button>
+            </span>
+          </div>
+          <label className="explorer-category-field">
             Danh mục
             <select
               value={category}
@@ -156,7 +169,6 @@ function Explorer({ config, categories, initialSlug }: Props) {
               ))}
             </select>
           </label>
-          <button type="submit">Tìm kiếm</button>
         </form>
         {list.isPending && <p role="status">Đang tải địa điểm…</p>}
         {list.isError && (
@@ -167,15 +179,21 @@ function Explorer({ config, categories, initialSlug }: Props) {
         )}
         {list.data && (
           <>
-            <p>
-              {list.data.items.length} kết quả
-              {offset > 0 ? ` · từ ${offset + 1}` : ""}
-            </p>
+            <div className="explorer-results-heading">
+              <strong>Địa điểm công khai</strong>
+              <span>
+                {list.data.items.length} kết quả
+                {offset > 0 ? ` · từ ${offset + 1}` : ""}
+              </span>
+            </div>
             {!list.data.items.length && (
-              <p>
-                Chưa có địa điểm công khai phù hợp. Dữ liệu chỉ xuất hiện sau
-                khi được rà soát và xuất bản.
-              </p>
+              <div className="explorer-empty">
+                <strong>Chưa có địa điểm phù hợp</strong>
+                <p>
+                  Chỉ Place đã qua các cổng nguồn và xuất bản mới xuất hiện tại
+                  đây.
+                </p>
+              </div>
             )}
             <ul className="place-results">
               {list.data.items.map((p) => (

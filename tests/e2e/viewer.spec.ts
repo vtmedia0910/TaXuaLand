@@ -2,6 +2,7 @@ import { expect, test } from "../support/browser";
 test("Cesium shell, layer controls, camera reset and mobile viewport", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/map");
@@ -17,14 +18,14 @@ test("Cesium shell, layer controls, camera reset and mobile viewport", async ({
   const viewer = page.getByTestId("spatial-viewer");
   await expect(viewer).toHaveAttribute("data-cesium-state", "READY");
   await expect(viewer).toHaveAttribute("data-terrain-status", "UNAVAILABLE");
-  await expect(viewer).toHaveAttribute("data-imagery-status", "READY");
+  await expect(viewer).toHaveAttribute("data-imagery-status", "UNAVAILABLE");
   await expect(viewer).toHaveAttribute("data-roads-status", "UNAVAILABLE");
   await expect(viewer).toHaveAttribute("data-places-status", "READY");
   const navigationCount = await page.evaluate(
     () => performance.getEntriesByType("navigation").length,
   );
-  await page.getByLabel("Lưới nền", { exact: true }).uncheck();
-  await page.getByLabel("Lưới nền", { exact: true }).check();
+  await page.getByLabel("Lưới tham chiếu", { exact: true }).uncheck();
+  await page.getByLabel("Lưới tham chiếu", { exact: true }).check();
   await page
     .locator(".cesium-host canvas")
     .evaluate((canvas) => Reflect.set(window, "__landViewerCanvas", canvas));
@@ -59,10 +60,22 @@ test("Cesium shell, layer controls, camera reset and mobile viewport", async ({
   ).toBe(navigationCount);
   await page.screenshot({ path: "work/qa-viewer-desktop.png" });
   await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+    .toBe(390);
+  const mobileViewer = await viewer.boundingBox();
+  const mobilePanel = await page.locator(".explorer-panel").boundingBox();
+  expect(mobileViewer).not.toBeNull();
+  expect(mobileViewer!.height).toBeGreaterThan(780);
+  expect(mobilePanel).not.toBeNull();
+  expect(mobilePanel!.y).toBeGreaterThan(480);
+  expect(844 - (mobilePanel!.y + mobilePanel!.height)).toBeLessThanOrEqual(9);
+  await expect(page.getByLabel("Danh mục")).toBeVisible();
   await page.screenshot({ path: "work/qa-viewer-mobile.png" });
   expect(errors).toEqual([]);
 });
 test("WebGL unavailable yields a usable fallback", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (
@@ -88,6 +101,15 @@ test("WebGL unavailable yields a usable fallback", async ({ page }) => {
   await expect(retry).toBeFocused();
   await expect(page.getByLabel("Tìm kiếm và thông tin địa điểm")).toBeVisible();
   await page.screenshot({ path: "work/qa-viewer-fallback.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByLabel("Tìm kiếm và thông tin địa điểm")).toBeVisible();
+  await expect(retry).toBeVisible();
+  const retryBox = await retry.boundingBox();
+  const panelBox = await page.locator(".explorer-panel").boundingBox();
+  expect(retryBox).not.toBeNull();
+  expect(panelBox).not.toBeNull();
+  expect(retryBox!.y + retryBox!.height).toBeLessThan(panelBox!.y);
+  await page.screenshot({ path: "work/qa-viewer-fallback-mobile.png" });
 });
 
 test("reduced motion reaches the regional frame without a normal flight", async ({

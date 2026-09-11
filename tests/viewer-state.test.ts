@@ -31,7 +31,7 @@ describe("Phase 1A viewer state", () => {
   it("keeps unavailable future layers independent from initialized layers", () => {
     expect(initialLayerReadiness(LAND_VIEWER_BASE)).toEqual({
       terrain: "UNAVAILABLE",
-      imagery: "INITIALIZING",
+      imagery: "UNAVAILABLE",
       roads: "UNAVAILABLE",
       places: "INITIALIZING",
     });
