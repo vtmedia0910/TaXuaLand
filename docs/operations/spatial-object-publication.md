@@ -10,6 +10,42 @@ Use an existing reviewed Phase 0 release or prepare a new release through the ex
 
 The Phase 0 local registration command remains local QA only. It can populate the accepted registry from the existing pipeline outputs, but is not a cloud rights-approval workflow. Do not run it against an unreviewed production dataset. Raw/normalized/derived assets and road observation/source records remain under the original pipeline policy.
 
+### Register the reviewed terrain metadata as APPROVED
+
+`register-approved-release.ts` is the bounded production-safe metadata onboarding gate for an already processed `LAND_HEIGHTMAP_V1` terrain build. It reuses one explicitly selected existing Source, requires operator database authority that the web runtime must not have, validates the source lock, committed QA evidence, build evidence, manifest, raw/normalized/derived files and every published tile, then transactionally registers the Dataset, immutable asset descriptors, COMPLETED pipeline evidence and an APPROVED Release. It does not create or change Source rights, upload objects, create a delivery receipt, call `publishRelease`, or produce a PUBLISHED Release.
+
+The proposed Source metadata for `TX-DEM-2026-001` is shown below for owner review. It is not an approval and must not be submitted until the owner explicitly approves the rights record. The licence URL is evidence for that review, not an external legal opinion; `legalReviewedAt` remains `null`.
+
+```json
+{
+  "id": "0633d396-ed73-4d00-880c-73a2d421e822",
+  "name": "Copernicus GLO-30 Public AWS N21 E104",
+  "providerId": null,
+  "category": "TERRAIN",
+  "authorityLevel": "THIRD_PARTY",
+  "licenseName": "Copernicus WorldDEM-30 Free & Open",
+  "licenseReference": "https://documentation.dataspace.copernicus.eu/APIs/SentinelHub/Data/DEM/resources/license/License-COPDEM-30.pdf",
+  "commercialUse": "ALLOWED",
+  "publicDisplay": "ALLOWED",
+  "caching": "ALLOWED",
+  "derivatives": "ALLOWED",
+  "redistribution": "ALLOWED",
+  "legalReviewedAt": null,
+  "sourceCrs": "EPSG:4326",
+  "freshnessClass": "STATIC",
+  "status": "ACTIVE",
+  "lastCheckedAt": null
+}
+```
+
+After owner rights approval, register that Source through the existing authenticated `POST /api/admin/sources` workflow. A separately authorized operator can then run:
+
+```text
+node --experimental-transform-types --env-file=<operator-env> pipelines/register-approved-release.ts 0633d396-ed73-4d00-880c-73a2d421e822 work/gis/TX-DEM-2026-001 docs/qa/terrain-2026-001.json
+```
+
+The command must return the exact Release UUID with `status: APPROVED`. Review that output and the registered metadata before separately authorizing object delivery. Registration does not authorize delivery or publication.
+
 ## Deliver approved bytes
 
 Configure the dedicated LAND operator environment (never the browser): DATABASE_URL, LAND_ENVIRONMENT, SERVER_ORIGIN, OBJECT_STORE_DRIVER=s3, OBJECT_STORE_ENDPOINT, OBJECT_STORE_REGION, scoped OBJECT_STORE_ACCESS_KEY_ID/OBJECT_STORE_SECRET_ACCESS_KEY, PRIVATE_BUCKET, PUBLISHED_BUCKET and PUBLIC_ASSET_BASE_URL. Buckets must be separate. PUBLIC_ASSET_BASE_URL is one exact HTTPS origin, without path, credentials, wildcard, query or fragment. Map its root to the published bucket root. Do not place owner credentials in Vercel runtime.
