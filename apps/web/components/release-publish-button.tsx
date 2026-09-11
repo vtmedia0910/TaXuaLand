@@ -25,7 +25,7 @@ export function ReleasePublishButton({
         onClick={async () => {
           if (
             !window.confirm(
-              `Xuất bản release ${version}? APPROVED sẽ chuyển thành PUBLISHED.`,
+              `Xuất bản Release APPROVED ${version}? Release PUBLISHED trước đó của Dataset này (nếu có) sẽ chuyển thành RETIRED.`,
             )
           )
             return;
@@ -33,7 +33,7 @@ export function ReleasePublishButton({
           setResult(null);
           try {
             await adminRequest(
-              `/api/admin/datasets/${releaseId}/publish`,
+              `/api/admin/dataset-releases/${releaseId}/publish`,
               "POST",
             );
             setResult({ error: false, message: `Đã xuất bản ${version}.` });

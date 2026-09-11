@@ -42,8 +42,11 @@ test("all Admin routes require auth; role changes enforce narrow mutation permis
   expect(
     await page.evaluate(
       async (id) =>
-        (await fetch(`/api/admin/datasets/${id}/publish`, { method: "POST" }))
-          .status,
+        (
+          await fetch(`/api/admin/dataset-releases/${id}/publish`, {
+            method: "POST",
+          })
+        ).status,
       id,
     ),
   ).toBe(401);
@@ -51,7 +54,7 @@ test("all Admin routes require auth; role changes enforce narrow mutation permis
     ["places", "edit"],
     ["categories", "edit"],
     ["sources", "configure"],
-    [`datasets/${id}/publish`, "configure"],
+    [`dataset-releases/${id}/publish`, "configure"],
     ["imports", "import"],
     ["imports/upload-session", "import"],
     [`imports/${id}/finalize-upload`, "import"],

@@ -63,7 +63,12 @@ test("admin login, protected page and logout", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Dataset & release", exact: true }),
   ).toBeVisible();
-  page.once("dialog", (dialog) => dialog.accept());
+  page.once("dialog", (dialog) => {
+    expect(dialog.message()).toBe(
+      `Xuất bản Release APPROVED ${version}? Release PUBLISHED trước đó của Dataset này (nếu có) sẽ chuyển thành RETIRED.`,
+    );
+    return dialog.accept();
+  });
   await page
     .getByRole("button", { name: `Xuất bản release ${version}` })
     .click();
@@ -80,7 +85,7 @@ test("admin login, protected page and logout", async ({ page }) => {
     await page.evaluate(
       async () =>
         (
-          await fetch("/api/admin/datasets/not-a-uuid/publish", {
+          await fetch("/api/admin/dataset-releases/not-a-uuid/publish", {
             method: "POST",
           })
         ).status,
@@ -90,7 +95,7 @@ test("admin login, protected page and logout", async ({ page }) => {
     await page.evaluate(
       async (release) =>
         (
-          await fetch(`/api/admin/datasets/${release}/publish`, {
+          await fetch(`/api/admin/dataset-releases/${release}/publish`, {
             method: "POST",
           })
         ).status,
