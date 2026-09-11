@@ -70,6 +70,12 @@ it("resolves only configured origins, matching delivery and release-scoped keys"
   expect(() =>
     publishedBase({ ...env, LAND_ENVIRONMENT: "PREVIEW" }),
   ).toThrow();
+  expect(
+    publishedBase({
+      ...env,
+      PUBLIC_ASSET_BASE_URL: "https://future-assets.example.invalid",
+    }),
+  ).toBe("https://future-assets.example.invalid");
 });
 
 describe.skipIf(!process.env.DATABASE_TEST_URL)(
@@ -197,6 +203,19 @@ describe.skipIf(!process.env.DATABASE_TEST_URL)(
       }
       return { id, source, dataset, directory, bytes, version };
     }
+    it("rejects publication without configure permission or a valid release UUID", async () => {
+      await expect(
+        publishRelease(
+          { ...actor, permissions: new Set(["read"]) },
+          randomUUID(),
+          pool,
+          env,
+        ),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      await expect(
+        publishRelease(actor, "not-a-uuid", pool, env),
+      ).rejects.toThrow();
+    });
     it("delivery is not publish; explicit publication, retry, revoked rights and retirement remain authoritative", async () => {
       const f = await fixture();
       await expect(
@@ -219,6 +238,14 @@ describe.skipIf(!process.env.DATABASE_TEST_URL)(
       expect((await publicLayers(pool, env)).roadsUrl).toBeNull();
       await publishRelease(actor, f.id, pool, env);
       expect((await publicLayers(pool, env)).roadsUrl).toBe(delivered.url);
+      expect(
+        (
+          await pool.query(
+            "SELECT id FROM audit_events WHERE subject_id=$1 AND action='DATASET_RELEASE_PUBLISHED'",
+            [f.id],
+          )
+        ).rowCount,
+      ).toBe(1);
       await publishObjectRelease(pool, f.id, f.directory, store, base);
       expect(
         (
@@ -287,6 +314,17 @@ describe.skipIf(!process.env.DATABASE_TEST_URL)(
         [f.id],
       );
       expect((await publicLayers(pool, env)).roadsUrl).toBeNull();
+    });
+    it("rejects a delivered release that is no longer APPROVED", async () => {
+      const f = await fixture();
+      await publishObjectRelease(pool, f.id, f.directory, store, base);
+      await pool.query(
+        "UPDATE dataset_releases SET qa_status='DRAFT' WHERE id=$1",
+        [f.id],
+      );
+      await expect(
+        publishRelease(actor, f.id, pool, env),
+      ).rejects.toMatchObject({ code: "RELEASE_GATE" });
     });
     it("rejects publication when caching rights are revoked after delivery", async () => {
       const f = await fixture();

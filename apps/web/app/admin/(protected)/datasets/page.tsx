@@ -1,15 +1,18 @@
 import { currentAdmin } from "../../../../lib/admin-actor";
 import { listDatasets } from "@land/api/registry";
 import { TrustBadge } from "@land/ui/trust-badge";
+import { ReleasePublishButton } from "../../../../components/release-publish-button";
 export default async function Datasets() {
-  const datasets = await listDatasets(await currentAdmin());
+  const actor = await currentAdmin(),
+    datasets = await listDatasets(actor),
+    canConfigure = actor.permissions.has("configure");
   return (
     <>
       <p>REGISTRY / DATASETS</p>
       <h1>Dataset & release</h1>
       <p>
-        Release lưu phiên bản nguồn, CRS, datum và checksum. Chỉ release được
-        duyệt mới xuất bản.
+        Release lưu phiên bản nguồn, CRS, datum và checksum. APPROVED chưa phải
+        PUBLISHED; chỉ release đã duyệt và giao đủ object mới có thể xuất bản.
       </p>
       {datasets.length === 0 && <p>Chưa có dataset được đăng ký.</p>}
       {datasets.map((d) => (
@@ -27,6 +30,7 @@ export default async function Datasets() {
                   <th>Datum / resolution</th>
                   <th>Trạng thái</th>
                   <th>Checksum</th>
+                  {canConfigure && <th>Thao tác</th>}
                 </tr>
               </thead>
               <tbody>
@@ -49,6 +53,18 @@ export default async function Datasets() {
                       <TrustBadge value={r.qaStatus} />
                     </td>
                     <td className="hash">{r.checksum}</td>
+                    {canConfigure && (
+                      <td>
+                        {r.qaStatus === "APPROVED" ? (
+                          <ReleasePublishButton
+                            releaseId={r.id}
+                            version={r.version}
+                          />
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

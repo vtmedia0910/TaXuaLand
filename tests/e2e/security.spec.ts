@@ -38,10 +38,20 @@ test("all Admin routes require auth; role changes enforce narrow mutation permis
   ]) {
     expect((await request.get(`/api/admin/${path}`)).status()).toBe(401);
   }
+  await page.goto("/");
+  expect(
+    await page.evaluate(
+      async (id) =>
+        (await fetch(`/api/admin/datasets/${id}/publish`, { method: "POST" }))
+          .status,
+      id,
+    ),
+  ).toBe(401);
   const cases: [string, string][] = [
     ["places", "edit"],
     ["categories", "edit"],
     ["sources", "configure"],
+    [`datasets/${id}/publish`, "configure"],
     ["imports", "import"],
     ["imports/upload-session", "import"],
     [`imports/${id}/finalize-upload`, "import"],
