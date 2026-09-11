@@ -29,7 +29,7 @@ MERGED
 
 PR #2 is merged into `main`, and the agent-workflow documentation layer is installed through its separate documentation-only migration. Phase 0 architecture remains frozen. Re-check Git for the current `main` HEAD rather than treating the Phase 0.5 merge baseline as the latest repository SHA.
 
-The approved Phase 1 specification is merged through PR #4. Phase 1 implementation is now in progress on Slice 1A only.
+The approved Phase 1 specification is merged through PR #4. Slice 1A is complete and merged through PR #5. Phase 1 remains in progress; Slice 1B terrain data-readiness enablement is ready for review, while the production DATA READY gate remains blocked pending separately authorized registration/delivery/publication.
 
 ### Local-state boundary
 
@@ -72,12 +72,19 @@ Tà Xùa 3D
 IN PROGRESS
 SPECIFICATION APPROVED
 PR #4 MERGED
-SLICE 1A: COMPLETE — PR #5 APPROVED FOR MERGE
+SLICE 1A: COMPLETE — PR #5 MERGED
+ACTIVE SLICE: 1B — PUBLISHED TERRAIN
+SLICE 1B: DATA READINESS ENABLEMENT READY FOR REVIEW
+PRODUCTION TERRAIN: DATA READY BLOCKED
 ```
 
-The owner approved the Phase 1 specification and its four scope/data-readiness decisions on 2026-09-11. PR #4 merged the documentation-only specification; Slice 1A is the first authorized implementation work.
+The owner approved the Phase 1 specification and its four scope/data-readiness decisions on 2026-09-11. PR #4 merged the documentation-only specification; PR #5 subsequently merged the completed Slice 1A public 3D shell.
 
-Owner final screenshot review passed for Series 00, 01, and 08, and required remote CI passed on the reviewed PR #5 head. Functional, visual, scope, architecture, and E2E review are PASS; Slice 1A is complete and PR #5 is approved for merge. The neutral reference grid remains the honest fallback: Slice 1A does not imply that any terrain or imagery source/release is approved. After merge, the next authorized work is Slice 1B — published terrain, subject to its existing source, rights, Dataset/Release, provider, and accuracy gates.
+Owner final screenshot review passed for Series 00, 01, and 08, and required remote CI passed on the reviewed PR #5 head. Functional, visual, scope, architecture, and E2E review are PASS; Slice 1A is complete and merged. The neutral reference grid remains the honest fallback: Slice 1A does not imply that any terrain or imagery source/release is approved.
+
+Slice 1B discovery on 2026-09-11 found that the production public-layer contract returns HTTP 200 but exposes `terrainUrl`, `terrainRelease`, and `terrainChecksum` as `null`. The exact Phase 1 terrain release remains unselected, and the Phase 0.5 provider acceptance proved only the bounded diagnostic object lifecycle, not governed delivery of a terrain Release. The local `TX-DEM-2026-001` QA output is not production Dataset/Release/publication evidence.
+
+The bounded data-readiness enablement now provides an operator-only registration gate that validates the existing build and creates only an `APPROVED` Release with asset descriptors, completed pipeline evidence and audit. The actual candidate passed this gate in disposable local PostGIS with 347 registered descriptors, `published_at=null`, and no delivery receipt. The owner approved the proposed Source rights as a product-governance decision, not an external legal opinion; `legalReviewedAt` remains `null`. No runtime, provider, schema, production data, R2, delivery or publication mutation was performed. Production remains DATA READY BLOCKED until the owner explicitly authorizes production registration, reviews the resulting exact Release identity, and separately authorizes delivery/publication.
 
 The current architecture freeze remains in force. The approved specification extends it without reopening the frozen authority, publication, verification, provenance, security, or provider boundaries.
 
@@ -282,14 +289,17 @@ Primary visual:
 01-public-map-3d-experience-v2.png
 ```
 
-Current implementation is bounded to:
+Current implementation state is bounded to:
 
 ```text
-Slice 1A
+Slice 1A — COMPLETE / MERGED
 Public 3D shell + regional camera + degraded-state baseline
+
+Slice 1B — DATA READINESS ENABLEMENT READY FOR REVIEW
+Production DATA READY remains blocked; no governed terrain Release is currently exposed
 ```
 
-The approved specification is merged through PR #4. PR #5 must remain limited to Slice 1A until its own review and merge; do not use the future visual board as authorization to implement Property, AI, full viewshed intelligence, or travel-commerce routing.
+The approved specification is merged through PR #4 and Slice 1A through PR #5. Do not use the future visual board or the blocked Slice 1B gate as authorization to implement imagery, Property, AI, full viewshed intelligence, or travel-commerce routing.
 
 ---
 
@@ -432,7 +442,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-After PR #5 merges, proceed only through a separate Slice 1B change for published terrain; do not infer approved terrain or imagery from the completed Slice 1A shell.
+Review the Slice 1B data-readiness enablement and proposed Source record. Production registration requires explicit owner rights and mutation authorization; later object delivery and publication remain separate approvals. Do not bind terrain until one exact eligible immutable published terrain Release is established; imagery remains `UNAVAILABLE` and Slice 1C has not started.
 
 ---
 
@@ -498,13 +508,13 @@ PHASE 0.5 PR
 #2 — MERGED
 
 CURRENT PHASE
-Phase 1 in progress — Slice 1A complete / PR #5 approved for merge
+Phase 1 in progress — Slice 1A complete / merged; Slice 1B enablement ready for review
 
 PRIMARY CURRENT GOAL
-Merge the approved Slice 1A public 3D shell baseline
+Final-review the operator-only APPROVED terrain registration gate
 
 PHASE 1
-IN PROGRESS / SLICE 1A COMPLETE
+IN PROGRESS / SLICE 1A COMPLETE / SLICE 1B DATA READINESS ENABLEMENT READY FOR REVIEW
 
 ARCHITECTURE
 FROZEN
@@ -516,5 +526,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-After PR #5 merge: Slice 1B — published terrain, through a separate gated change.
+PR #7 final review, then separate production registration authorization; do not start Slice 1C.
 ```
