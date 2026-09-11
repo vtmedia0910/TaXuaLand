@@ -77,7 +77,7 @@ ACTIVE SLICE: 1A — PUBLIC 3D SHELL + REGIONAL CAMERA + DEGRADED-STATE BASELINE
 
 The owner approved the Phase 1 specification and its four scope/data-readiness decisions on 2026-09-11. PR #4 merged the documentation-only specification; Slice 1A is the first authorized implementation work.
 
-PR #5 remains open and unmerged. Its current local Slice 1A amendment converges `/map` toward the canonical map-first desktop and mobile experience while keeping the neutral reference grid distinct from approved imagery. Local validation completed with `pnpm check`, the isolated 10-test core E2E suite, focused normal/degraded/reduced-motion viewer checks, and side-by-side desktop/mobile inspection against Series 00/01/08. No major visual discrepancy remains inside Slice 1A; real approved imagery and terrain remain governed data-readiness work, not a presentation claim. Required remote CI must be re-checked after the amendment is pushed.
+PR #5 remains open and unmerged. Owner screenshot review rejected the earlier visual-fidelity claim while retaining functional, architecture, and readiness PASS. The current local correction brings `/map` toward the literal Series 00/01/08 silhouette: compact desktop product rail, floating discovery search, map-native controls, contextual light panel, and a mobile map-first shell with bottom navigation and state-sized bottom sheets. The neutral reference grid remains distinct from unavailable approved imagery; no terrain, imagery, road, Place, Property, or AI data was invented. Final local validation passed with `pnpm check`, the isolated 10-test core E2E suite, observed 1440×900 and 390×844 viewer frames, `git diff --check`, and the repository secret scan. Required remote CI must be re-checked on the pushed correction head before owner screenshot review.
 
 The current architecture freeze remains in force. The approved specification extends it without reopening the frozen authority, publication, verification, provenance, security, or provider boundaries.
 
@@ -432,7 +432,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-Push the validated Slice 1A visual-convergence amendment to PR #5, wait for required CI, and stop with PR #5 open for final review before merge.
+Validate and push the final Slice 1A visual-fidelity correction to PR #5, wait for required CI, and stop with PR #5 open for owner screenshot review before merge.
 
 ---
 
@@ -516,5 +516,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-Push the validated Slice 1A amendment to PR #5 and wait for required CI without merging.
+Validate and push the final Slice 1A visual-fidelity correction to PR #5, then wait for required CI without merging.
 ```

@@ -702,50 +702,99 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         ) : (
           <>
             <div className="map-tools" aria-label="Điều khiển bản đồ">
-              <span className="map-tools-title">Hiển thị</span>
-              <label className="map-tool-base">
-                <input
-                  type="checkbox"
-                  checked={visible.imagery}
-                  onChange={(event) =>
-                    setVisible((value) => ({
-                      ...value,
-                      imagery: event.target.checked,
-                    }))
-                  }
-                />
-                Lưới tham chiếu
-              </label>
-              {layers
-                .filter((layer) => layer.id !== "imagery")
-                .map((layer) => (
-                  <label key={layer.id}>
+              <details className="map-layer-control">
+                <summary
+                  role="button"
+                  aria-label="Mở lớp bản đồ"
+                  title="Lớp bản đồ"
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="m12 3 8 4-8 4-8-4 8-4Zm-8 9 8 4 8-4M4 17l8 4 8-4" />
+                  </svg>
+                </summary>
+                <div className="map-layer-menu">
+                  <div className="map-layer-menu-heading">
+                    <strong>Lớp bản đồ</strong>
+                    <small>Hiển thị và trạng thái</small>
+                  </div>
+                  <label className="map-tool-base">
                     <input
                       type="checkbox"
-                      checked={
-                        visible[layer.id] &&
-                        layerReadiness[layer.id] !== "UNAVAILABLE" &&
-                        layerReadiness[layer.id] !== "FAILED"
-                      }
-                      disabled={
-                        layerReadiness[layer.id] === "UNAVAILABLE" ||
-                        layerReadiness[layer.id] === "FAILED"
-                      }
+                      aria-label="Lưới tham chiếu"
+                      checked={visible.imagery}
                       onChange={(event) =>
-                        setVisible((v) => ({
-                          ...v,
-                          [layer.id]: event.target.checked,
+                        setVisible((value) => ({
+                          ...value,
+                          imagery: event.target.checked,
                         }))
                       }
                     />
-                    {layer.label}
+                    <span>
+                      Lưới tham chiếu
+                      <small>Nền trung tính đang dùng</small>
+                    </span>
                   </label>
-                ))}
-              <button type="button" onClick={() => reset()}>
-                Đặt lại góc nhìn
+                  {layers
+                    .filter((layer) => layer.id !== "imagery")
+                    .map((layer) => (
+                      <label key={layer.id}>
+                        <input
+                          type="checkbox"
+                          aria-label={layer.label}
+                          checked={
+                            visible[layer.id] &&
+                            layerReadiness[layer.id] !== "UNAVAILABLE" &&
+                            layerReadiness[layer.id] !== "FAILED"
+                          }
+                          disabled={
+                            layerReadiness[layer.id] === "UNAVAILABLE" ||
+                            layerReadiness[layer.id] === "FAILED"
+                          }
+                          onChange={(event) =>
+                            setVisible((value) => ({
+                              ...value,
+                              [layer.id]: event.target.checked,
+                            }))
+                          }
+                        />
+                        <span>
+                          {layer.label}
+                          <small>
+                            {readinessLabels[layerReadiness[layer.id]]}
+                          </small>
+                        </span>
+                      </label>
+                    ))}
+                  <div className="map-layer-status">
+                    <span>Ảnh nền</span>
+                    <strong>{readinessLabels[layerReadiness.imagery]}</strong>
+                  </div>
+                  {notice && (
+                    <p className="map-layer-notice" role="status">
+                      {notice}
+                    </p>
+                  )}
+                </div>
+              </details>
+              <button
+                className="map-tool-button"
+                type="button"
+                aria-label="Đặt lại góc nhìn"
+                title="Đặt lại góc nhìn"
+                onClick={() => reset()}
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="m4 11 8-7 8 7m-14 0v9h12v-9m-8 9v-6h4v6" />
+                </svg>
               </button>
-              <button type="button" onClick={() => reset(true)}>
-                Nhìn từ trên
+              <button
+                className="map-tool-button map-tool-overhead"
+                type="button"
+                aria-label="Nhìn từ trên"
+                title="Nhìn từ trên"
+                onClick={() => reset(true)}
+              >
+                <span aria-hidden="true">3D</span>
               </button>
             </div>
             {!ready && (
@@ -753,12 +802,23 @@ export default function ViewerEngine(props: SpatialViewerProps) {
                 Đang khởi tạo Cesium…
               </div>
             )}
-            {notice && <p className="map-notice">{notice}</p>}
+            {(layerReadiness.terrain === "FAILED" ||
+              (layerReadiness.terrain === "UNAVAILABLE" &&
+                layerReadiness.imagery === "UNAVAILABLE")) && (
+              <p className="map-fallback-label">
+                <strong>Lưới tham chiếu</strong>
+                <span>
+                  {layerReadiness.terrain === "FAILED"
+                    ? "Địa hình lỗi; lớp nền hiện tại không dùng để đánh giá địa hình"
+                    : "Địa hình và ảnh nền thực chưa khả dụng"}
+                </span>
+              </p>
+            )}
           </>
         )}
       </div>
       <ul
-        className="viewer-layer-readiness"
+        className="sr-only"
         aria-label="Trạng thái sẵn sàng của lớp bản đồ"
         aria-live="polite"
       >

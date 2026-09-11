@@ -104,8 +104,18 @@ function Explorer({ config, categories, initialSlug }: Props) {
     else url.searchParams.delete("place");
     window.history.pushState(null, "", url);
   };
+  const panelMode = slug
+    ? "selected"
+    : query || category || list.isError
+      ? "results"
+      : "default";
   return (
-    <div className="explorer" data-testid="map-shell" data-shell-state="READY">
+    <div
+      className="explorer"
+      data-testid="map-shell"
+      data-shell-state="READY"
+      data-panel-state={panelMode}
+    >
       <div className="explorer-map">
         <SpatialViewer
           config={config}
@@ -118,127 +128,172 @@ function Explorer({ config, categories, initialSlug }: Props) {
           }}
         />
       </div>
+      <form
+        className="explorer-search-form"
+        aria-label="Tìm địa điểm công khai"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setQuery(draft);
+          setOffset(0);
+        }}
+      >
+        <label className="sr-only" htmlFor="public-place-search">
+          Tìm địa điểm
+        </label>
+        <svg
+          className="explorer-search-icon"
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+        >
+          <path d="m20 20-4.3-4.3m2.3-5.2a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" />
+        </svg>
+        <input
+          id="public-place-search"
+          type="search"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          maxLength={120}
+          placeholder="Tìm địa điểm, khu vực…"
+        />
+        <button
+          className="explorer-search-submit"
+          type="submit"
+          aria-label="Tìm kiếm"
+        >
+          Tìm
+        </button>
+        <details className="explorer-search-filter">
+          <summary aria-label="Lọc theo danh mục" title="Lọc theo danh mục">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M4 6h16M7 12h10m-7 6h4" />
+            </svg>
+            <span className="sr-only">Lọc theo danh mục</span>
+          </summary>
+          <div className="explorer-filter-popover">
+            <label className="explorer-category-field">
+              Danh mục
+              <select
+                value={category}
+                onChange={(event) => {
+                  setCategory(event.target.value);
+                  setOffset(0);
+                }}
+              >
+                <option value="">Tất cả danh mục</option>
+                {categories.map((item) => (
+                  <option key={item.id} value={item.code}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </details>
+      </form>
       <aside
-        className="explorer-panel"
+        className={`explorer-panel explorer-panel--${panelMode}`}
         aria-label="Tìm kiếm và thông tin địa điểm"
       >
         <span className="sheet-handle" aria-hidden="true" />
-        <header className="explorer-panel-heading">
-          <p className="explorer-kicker">KHÁM PHÁ KHÔNG GIAN</p>
-          <h2>TÀ XÙA</h2>
-          <p>Vùng phủ sản phẩm hiện tại · không phải ranh giới hành chính.</p>
-        </header>
-        <form
-          className="explorer-search-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setQuery(draft);
-            setOffset(0);
-          }}
-        >
-          <div className="explorer-search-field">
-            <label htmlFor="public-place-search">Tìm địa điểm</label>
-            <span className="explorer-search-control">
-              <input
-                id="public-place-search"
-                type="search"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                maxLength={120}
-                placeholder="Tên địa điểm, khu vực…"
-              />
-              <button type="submit" aria-label="Tìm kiếm">
-                Tìm
-              </button>
-            </span>
-          </div>
-          <label className="explorer-category-field">
-            Danh mục
-            <select
-              value={category}
-              onChange={(e) => {
-                setCategory(e.target.value);
-                setOffset(0);
-              }}
-            >
-              <option value="">Tất cả danh mục</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.code}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </form>
-        {list.isPending && <p role="status">Đang tải địa điểm…</p>}
-        {list.isError && (
-          <p role="alert">
-            {list.error.message}
-            <button onClick={() => void list.refetch()}>Thử lại</button>
-          </p>
-        )}
-        {list.data && (
+        {slug ? (
           <>
-            <div className="explorer-results-heading">
-              <strong>Địa điểm công khai</strong>
-              <span>
-                {list.data.items.length} kết quả
-                {offset > 0 ? ` · từ ${offset + 1}` : ""}
-              </span>
+            <div className="explorer-panel-toolbar">
+              <span>ĐỊA ĐIỂM</span>
+              <button
+                className="panel-close"
+                type="button"
+                aria-label="Đóng chi tiết"
+                onClick={() => select(null)}
+              >
+                ×
+              </button>
             </div>
-            {!list.data.items.length && (
-              <div className="explorer-empty">
-                <strong>Chưa có địa điểm phù hợp</strong>
-                <p>
-                  Chỉ Place đã qua các cổng nguồn và xuất bản mới xuất hiện tại
-                  đây.
-                </p>
-              </div>
-            )}
-            <ul className="place-results">
-              {list.data.items.map((p) => (
-                <li key={p.id}>
-                  <button
-                    aria-pressed={slug === p.slug}
-                    onClick={() => select(p.slug)}
-                  >
-                    <strong>{p.name}</strong>
-                    <span>{p.categories.map((c) => c.name).join(" · ")}</span>
-                    <small>Vị trí: {p.location.verificationStatus}</small>
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <div className="pagination">
-              {offset > 0 && (
-                <button onClick={() => setOffset(Math.max(0, offset - 50))}>
-                  Trang trước
-                </button>
-              )}
-              {list.data.nextOffset !== null && (
-                <button onClick={() => setOffset(list.data!.nextOffset!)}>
-                  Trang tiếp
-                </button>
-              )}
-            </div>
-          </>
-        )}
-        {slug && (
-          <section aria-label="Chi tiết địa điểm">
-            <button className="secondary" onClick={() => select(null)}>
-              Đóng chi tiết
-            </button>
             {detail.isPending && <p role="status">Đang tải chi tiết…</p>}
             {detail.isError && <p role="alert">{detail.error.message}</p>}
             {detail.data && (
               <>
                 <PlaceDetail place={detail.data} />
-                <Link href={`/places/${detail.data.slug}`}>
+                <Link
+                  className="place-share-link"
+                  href={`/places/${detail.data.slug}`}
+                >
                   Mở trang địa điểm / liên kết chia sẻ
                 </Link>
               </>
             )}
-          </section>
+          </>
+        ) : (
+          <>
+            <header className="explorer-panel-heading">
+              <p className="explorer-kicker">KHÁM PHÁ KHÔNG GIAN</p>
+              <div>
+                <h2>Địa điểm công khai</h2>
+                <span>{list.data?.items.length ?? 0} kết quả</span>
+              </div>
+              <p>
+                Vùng phủ sản phẩm hiện tại · không phải ranh giới hành chính.
+              </p>
+            </header>
+            {list.isPending && <p role="status">Đang tải địa điểm…</p>}
+            {list.isError && (
+              <p role="alert">
+                {list.error.message}
+                <button type="button" onClick={() => void list.refetch()}>
+                  Thử lại
+                </button>
+              </p>
+            )}
+            {list.data && (
+              <>
+                <div className="explorer-results-heading">
+                  <strong>
+                    {query || category ? "Kết quả tìm kiếm" : "Khám phá"}
+                  </strong>
+                  <span>
+                    {list.data.items.length} kết quả
+                    {offset > 0 ? ` · từ ${offset + 1}` : ""}
+                  </span>
+                </div>
+                {!list.data.items.length && (
+                  <div className="explorer-empty">
+                    <strong>Chưa có địa điểm phù hợp</strong>
+                    <p>
+                      Chỉ Place đã qua các cổng nguồn và xuất bản mới xuất hiện
+                      tại đây.
+                    </p>
+                  </div>
+                )}
+                <ul className="place-results">
+                  {list.data.items.map((p) => (
+                    <li key={p.id}>
+                      <button
+                        aria-pressed={slug === p.slug}
+                        onClick={() => select(p.slug)}
+                      >
+                        <strong>{p.name}</strong>
+                        <span>
+                          {p.categories.map((c) => c.name).join(" · ")}
+                        </span>
+                        <small>Vị trí: {p.location.verificationStatus}</small>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="pagination">
+                  {offset > 0 && (
+                    <button onClick={() => setOffset(Math.max(0, offset - 50))}>
+                      Trang trước
+                    </button>
+                  )}
+                  {list.data.nextOffset !== null && (
+                    <button onClick={() => setOffset(list.data!.nextOffset!)}>
+                      Trang tiếp
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </>
         )}
       </aside>
     </div>

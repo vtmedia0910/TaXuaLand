@@ -37,9 +37,28 @@ test("Cesium shell, layer controls, camera reset and mobile viewport", async ({
     expect(values![4]).toBeCloseTo(-55, 1);
   };
   await expectRegionalCamera();
+  const rail = page.locator(".public-header");
+  const desktopSearch = page.locator(".explorer-search-form");
+  const desktopPanel = page.locator(".explorer-panel");
+  const railBox = await rail.boundingBox();
+  const searchBox = await desktopSearch.boundingBox();
+  const panelBox = await desktopPanel.boundingBox();
+  expect(railBox).not.toBeNull();
+  expect(railBox!.width).toBeLessThan(120);
+  expect(railBox!.height).toBe(900);
+  expect(searchBox).not.toBeNull();
+  expect(searchBox!.y).toBeLessThan(40);
+  expect(searchBox!.width).toBeGreaterThan(420);
+  expect(panelBox).not.toBeNull();
+  expect(panelBox!.height).toBeLessThan(230);
+  await expect(
+    page.getByText("Địa hình và ảnh nền thực chưa khả dụng"),
+  ).toBeVisible();
   const navigationCount = await page.evaluate(
     () => performance.getEntriesByType("navigation").length,
   );
+  const layerControl = page.getByRole("button", { name: "Mở lớp bản đồ" });
+  await layerControl.click();
   const referenceGrid = page.getByLabel("Lưới tham chiếu", { exact: true });
   await referenceGrid.focus();
   await expect(referenceGrid).toBeFocused();
@@ -47,6 +66,7 @@ test("Cesium shell, layer controls, camera reset and mobile viewport", async ({
   await expect(referenceGrid).not.toBeChecked();
   await page.keyboard.press("Space");
   await expect(referenceGrid).toBeChecked();
+  await layerControl.click();
   await page
     .locator(".cesium-host canvas")
     .evaluate((canvas) => Reflect.set(window, "__landViewerCanvas", canvas));
@@ -93,8 +113,21 @@ test("Cesium shell, layer controls, camera reset and mobile viewport", async ({
   expect(mobileViewer!.height).toBeGreaterThan(780);
   expect(mobilePanel).not.toBeNull();
   expect(mobilePanel!.y).toBeGreaterThan(480);
-  expect(844 - (mobilePanel!.y + mobilePanel!.height)).toBeLessThanOrEqual(9);
-  await expect(page.getByLabel("Danh mục")).toBeVisible();
+  expect(mobilePanel!.height).toBeLessThan(130);
+  expect(844 - (mobilePanel!.y + mobilePanel!.height)).toBeGreaterThan(60);
+  expect(844 - (mobilePanel!.y + mobilePanel!.height)).toBeLessThan(90);
+  const mobileSearch = await desktopSearch.boundingBox();
+  const mobileControls = await page.locator(".map-tools").boundingBox();
+  const mobileNav = await page.locator(".public-nav-primary").boundingBox();
+  expect(mobileSearch).not.toBeNull();
+  expect(mobileSearch!.y).toBeGreaterThanOrEqual(60);
+  expect(mobileControls).not.toBeNull();
+  expect(mobileControls!.x).toBeGreaterThan(320);
+  expect(mobileNav).not.toBeNull();
+  expect(mobileNav!.y).toBeGreaterThan(775);
+  await expect(
+    page.getByRole("combobox", { name: "Danh mục", exact: true }),
+  ).not.toBeVisible();
   await page.screenshot({ path: "work/qa-viewer-mobile.png" });
   expect(errors).toEqual([]);
 });
