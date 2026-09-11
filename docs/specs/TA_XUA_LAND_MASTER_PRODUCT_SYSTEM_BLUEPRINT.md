@@ -148,13 +148,14 @@ SOURCE
 → VALIDATION
 → REVIEW
 → DOMAIN STATE
-→ VERIFICATION
-→ PUBLICATION
-→ VERSIONED RELEASE
-→ PUBLIC-SAFE CONTRACT
-→ 3D / ADMIN EXPERIENCE
-→ DETERMINISTIC INTELLIGENCE
-→ GROUNDED AI EXPLANATION
+├──→ VERIFICATION / TRUST LIFECYCLE
+│     (independent; may remain UNKNOWN and may change over time)
+└──→ PUBLICATION / VERSIONED RELEASE
+      (independent source, eligibility and public-safety gates)
+      → PUBLIC-SAFE CONTRACT
+      → 3D / ADMIN EXPERIENCE
+      → DETERMINISTIC INTELLIGENCE
+      → GROUNDED AI EXPLANATION
 ```
 
 No later layer may silently redefine authority from an earlier layer.
