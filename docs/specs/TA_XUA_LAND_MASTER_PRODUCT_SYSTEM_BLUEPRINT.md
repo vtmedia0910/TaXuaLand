@@ -1773,22 +1773,20 @@ CONTROLLED INGESTION
 DOMAIN OBJECTS
         ↓
 SPATIAL TRUTH + HISTORY
-        ↓
-VERIFICATION
-        ↓
-PUBLICATION
-        ↓
-VERSIONED DATASET / RELEASE
-        ↓
-PUBLIC-SAFE CONTRACT
-        ↓
-MAP / ADMIN EXPERIENCE
-        ↓
-DETERMINISTIC SPATIAL INTELLIGENCE
-        ↓
-PROPERTY INTELLIGENCE
-        ↓
-GROUNDED AI EXPLANATION
+        ├──→ VERIFICATION / TRUST LIFECYCLE
+        │     (independent; may remain UNKNOWN and may change over time)
+        └──→ PUBLICATION / VERSIONED DATASET / RELEASE
+              (independent source, eligibility and public-safety gates)
+              ↓
+        PUBLIC-SAFE CONTRACT
+              ↓
+        MAP / ADMIN EXPERIENCE
+              ↓
+        DETERMINISTIC SPATIAL INTELLIGENCE
+              ↓
+        PROPERTY INTELLIGENCE
+              ↓
+        GROUNDED AI EXPLANATION
 ```
 
 ---
