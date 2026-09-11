@@ -305,6 +305,18 @@ describe.skipIf(!process.env.DATABASE_TEST_URL)(
       ).rejects.toThrow("RIGHTS REVIEW REQUIRED");
     });
 
+    it("rejects a source whose name does not match the terrain manifest", async () => {
+      const sourceId = await source();
+      const files = await fixture();
+      await pool.query("UPDATE sources SET name='Different reviewed terrain source' WHERE id=$1", [
+        sourceId,
+      ]);
+      await expect(
+        registerApprovedTerrainRelease(pool, { sourceId, ...files }),
+      ).rejects.toThrow("Terrain source identity mismatch");
+      expect((await pool.query("SELECT 1 FROM datasets")).rowCount).toBe(0);
+    });
+
     it("rejects QA that claims non-UNKNOWN field verification", async () => {
       const sourceId = await source();
       const files = await fixture();

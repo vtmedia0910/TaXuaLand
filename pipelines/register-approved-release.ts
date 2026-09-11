@@ -278,6 +278,8 @@ export async function registerApprovedTerrainRelease(
       source.license_reference !== inspected.manifest.license
     )
       throw Error("RIGHTS REVIEW REQUIRED");
+    if (source.name !== inspected.manifest.source)
+      throw Error("Terrain source identity mismatch");
     if (
       source.category !== "TERRAIN" ||
       source.source_crs !== inspected.manifest.horizontalCrs

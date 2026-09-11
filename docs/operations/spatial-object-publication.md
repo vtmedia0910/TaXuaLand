@@ -14,12 +14,12 @@ The Phase 0 local registration command remains local QA only. It can populate th
 
 `register-approved-release.ts` is the bounded production-safe metadata onboarding gate for an already processed `LAND_HEIGHTMAP_V1` terrain build. It reuses one explicitly selected existing Source, requires operator database authority that the web runtime must not have, validates the source lock, committed QA evidence, build evidence, manifest, raw/normalized/derived files and every published tile, then transactionally registers the Dataset, immutable asset descriptors, COMPLETED pipeline evidence and an APPROVED Release. It does not create or change Source rights, upload objects, create a delivery receipt, call `publishRelease`, or produce a PUBLISHED Release.
 
-The proposed Source metadata for `TX-DEM-2026-001` is shown below for owner review. It is not an approval and must not be submitted until the owner explicitly approves the rights record. The licence URL is evidence for that review, not an external legal opinion; `legalReviewedAt` remains `null`.
+The owner approved the proposed Source rights for `TX-DEM-2026-001` as a product-governance decision based on the recorded licence evidence. This is not an external legal opinion; `legalReviewedAt` remains `null`. The approval does not register the Source or authorize production registration, delivery or publication.
 
 ```json
 {
   "id": "0633d396-ed73-4d00-880c-73a2d421e822",
-  "name": "Copernicus GLO-30 Public AWS N21 E104",
+  "name": "Copernicus DEM GLO-30 Public / AWS COG N21 E104",
   "providerId": null,
   "category": "TERRAIN",
   "authorityLevel": "THIRD_PARTY",
@@ -38,7 +38,7 @@ The proposed Source metadata for `TX-DEM-2026-001` is shown below for owner revi
 }
 ```
 
-After owner rights approval, register that Source through the existing authenticated `POST /api/admin/sources` workflow. A separately authorized operator can then run:
+Under a separately authorized production registration step, register that Source through the existing authenticated `POST /api/admin/sources` workflow. A separately authorized operator can then run:
 
 ```text
 node --experimental-transform-types --env-file=<operator-env> pipelines/register-approved-release.ts 0633d396-ed73-4d00-880c-73a2d421e822 work/gis/TX-DEM-2026-001 docs/qa/terrain-2026-001.json

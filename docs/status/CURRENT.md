@@ -29,7 +29,7 @@ MERGED
 
 PR #2 is merged into `main`, and the agent-workflow documentation layer is installed through its separate documentation-only migration. Phase 0 architecture remains frozen. Re-check Git for the current `main` HEAD rather than treating the Phase 0.5 merge baseline as the latest repository SHA.
 
-The approved Phase 1 specification is merged through PR #4. Slice 1A is complete and merged through PR #5. Phase 1 remains in progress; Slice 1B terrain data-readiness enablement is ready for review, while the production DATA READY gate remains blocked pending owner rights approval and separately authorized registration/delivery/publication.
+The approved Phase 1 specification is merged through PR #4. Slice 1A is complete and merged through PR #5. Phase 1 remains in progress; Slice 1B terrain data-readiness enablement is ready for review, while the production DATA READY gate remains blocked pending separately authorized registration/delivery/publication.
 
 ### Local-state boundary
 
@@ -84,7 +84,7 @@ Owner final screenshot review passed for Series 00, 01, and 08, and required rem
 
 Slice 1B discovery on 2026-09-11 found that the production public-layer contract returns HTTP 200 but exposes `terrainUrl`, `terrainRelease`, and `terrainChecksum` as `null`. The exact Phase 1 terrain release remains unselected, and the Phase 0.5 provider acceptance proved only the bounded diagnostic object lifecycle, not governed delivery of a terrain Release. The local `TX-DEM-2026-001` QA output is not production Dataset/Release/publication evidence.
 
-The bounded data-readiness enablement now provides an operator-only registration gate that validates the existing build and creates only an `APPROVED` Release with asset descriptors, completed pipeline evidence and audit. The actual candidate passed this gate in disposable local PostGIS with 347 registered descriptors, `published_at=null`, and no delivery receipt. No runtime, provider, schema, production data, R2, delivery or publication mutation was performed. Production remains DATA READY BLOCKED until the owner reviews the proposed Source rights, explicitly authorizes production registration, reviews the resulting exact Release identity, and separately authorizes delivery/publication.
+The bounded data-readiness enablement now provides an operator-only registration gate that validates the existing build and creates only an `APPROVED` Release with asset descriptors, completed pipeline evidence and audit. The actual candidate passed this gate in disposable local PostGIS with 347 registered descriptors, `published_at=null`, and no delivery receipt. The owner approved the proposed Source rights as a product-governance decision, not an external legal opinion; `legalReviewedAt` remains `null`. No runtime, provider, schema, production data, R2, delivery or publication mutation was performed. Production remains DATA READY BLOCKED until the owner explicitly authorizes production registration, reviews the resulting exact Release identity, and separately authorizes delivery/publication.
 
 The current architecture freeze remains in force. The approved specification extends it without reopening the frozen authority, publication, verification, provenance, security, or provider boundaries.
 
@@ -511,7 +511,7 @@ CURRENT PHASE
 Phase 1 in progress — Slice 1A complete / merged; Slice 1B enablement ready for review
 
 PRIMARY CURRENT GOAL
-Review Source rights and the operator-only APPROVED terrain registration gate
+Final-review the operator-only APPROVED terrain registration gate
 
 PHASE 1
 IN PROGRESS / SLICE 1A COMPLETE / SLICE 1B DATA READINESS ENABLEMENT READY FOR REVIEW
@@ -526,5 +526,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-Owner rights/release review, then separate production registration authorization; do not start Slice 1C.
+PR #7 final review, then separate production registration authorization; do not start Slice 1C.
 ```
