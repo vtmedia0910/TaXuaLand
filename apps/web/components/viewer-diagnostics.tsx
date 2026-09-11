@@ -27,9 +27,10 @@ export function ViewerDiagnosticsPanel({ config }: { config: ViewerConfig }) {
             {data.initialized ? "READY" : "NOT_READY"} /{" "}
             {data.webgl ? "SUPPORTED" : "UNAVAILABLE"}
           </dd>
-          <dt>Terrain / imagery / roads</dt>
+          <dt>Terrain / imagery / roads / Places</dt>
           <dd>
-            {data.terrainStatus} / {data.imageryStatus} / {data.roadsStatus}
+            {data.layers.terrain} / {data.layers.imagery} / {data.layers.roads}{" "}
+            / {data.layers.places}
           </dd>
           <dt>Release terrain / roads</dt>
           <dd>

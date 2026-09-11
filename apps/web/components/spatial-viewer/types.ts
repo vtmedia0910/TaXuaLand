@@ -1,5 +1,6 @@
 import type {
   ViewerConfig,
+  LayerReadiness,
   ViewerPoint,
   ViewerDiagnostics,
 } from "../../../../packages/spatial-types/src/viewer";
@@ -14,4 +15,5 @@ export interface SpatialViewerProps {
   picker?: boolean;
   focusRequest?: number;
   forceFallback?: boolean;
+  placesReadiness?: LayerReadiness;
 }

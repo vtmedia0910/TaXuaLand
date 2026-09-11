@@ -27,7 +27,9 @@ Phase 0.5 pull request
 MERGED
 ```
 
-PR #2 is merged into `main`, and the agent-workflow documentation layer is installed through its separate documentation-only migration. Phase 0 architecture remains frozen and Phase 1 has not started. Re-check Git for the current `main` HEAD rather than treating the Phase 0.5 merge baseline as the latest repository SHA.
+PR #2 is merged into `main`, and the agent-workflow documentation layer is installed through its separate documentation-only migration. Phase 0 architecture remains frozen. Re-check Git for the current `main` HEAD rather than treating the Phase 0.5 merge baseline as the latest repository SHA.
+
+The approved Phase 1 specification is merged through PR #4. Phase 1 implementation is now in progress on Slice 1A only.
 
 ### Local-state boundary
 
@@ -67,12 +69,15 @@ MERGED THROUGH PR #2
 
 Phase 1
 Tà Xùa 3D
-NOT STARTED
+IN PROGRESS
 SPECIFICATION APPROVED
-IMPLEMENTATION AUTHORIZATION EFFECTIVE ON PR #4 MERGE
+PR #4 MERGED
+SLICE 1A: COMPLETE — PR #5 APPROVED FOR MERGE
 ```
 
-The owner approved the Phase 1 specification and its four scope/data-readiness decisions on 2026-09-11. No Phase 1 implementation belongs in PR #4; implementation begins only after the approved specification passes required CI and is merged.
+The owner approved the Phase 1 specification and its four scope/data-readiness decisions on 2026-09-11. PR #4 merged the documentation-only specification; Slice 1A is the first authorized implementation work.
+
+Owner final screenshot review passed for Series 00, 01, and 08, and required remote CI passed on the reviewed PR #5 head. Functional, visual, scope, architecture, and E2E review are PASS; Slice 1A is complete and PR #5 is approved for merge. The neutral reference grid remains the honest fallback: Slice 1A does not imply that any terrain or imagery source/release is approved. After merge, the next authorized work is Slice 1B — published terrain, subject to its existing source, rights, Dataset/Release, provider, and accuracy gates.
 
 The current architecture freeze remains in force. The approved specification extends it without reopening the frozen authority, publication, verification, provenance, security, or provider boundaries.
 
@@ -253,7 +258,7 @@ Visual sample values remain illustrative only.
 
 ## 9. Phase 1 boundary
 
-Phase 1 is expected to become:
+Phase 1 is:
 
 ```text
 Tà Xùa 3D
@@ -277,21 +282,20 @@ Primary visual:
 01-public-map-3d-experience-v2.png
 ```
 
-However:
+Current implementation is bounded to:
 
 ```text
-PHASE 1 MUST NOT START
-until the approved dedicated Phase 1 specification
-passes required CI and is merged through PR #4.
+Slice 1A
+Public 3D shell + regional camera + degraded-state baseline
 ```
 
-Do not use the future visual board as authorization to implement Property, AI, full viewshed intelligence, or travel-commerce routing.
+The approved specification is merged through PR #4. PR #5 must remain limited to Slice 1A until its own review and merge; do not use the future visual board as authorization to implement Property, AI, full viewshed intelligence, or travel-commerce routing.
 
 ---
 
 ## 10. Current operational risks
 
-Keep these risks visible while preparing the Phase 1 specification:
+Keep these risks visible during the current Phase 1 slice:
 
 - published operator credentials may accidentally enter web runtime;
 - private/public storage authority may be blurred;
@@ -302,7 +306,7 @@ Keep these risks visible while preparing the Phase 1 specification:
 - Property/AI scope may leak into the Phase 1 specification;
 - broad refactoring before an approved specification may create unnecessary risk.
 
-Prefer a bounded specification over unrelated cleanup.
+Prefer the bounded approved slice over unrelated cleanup.
 
 ---
 
@@ -428,7 +432,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-Merge the approved `docs/PHASE_1_TA_XUA_3D.md` through PR #4 after required CI passes. Then begin Slice 1A on a separate implementation branch.
+After PR #5 merges, proceed only through a separate Slice 1B change for published terrain; do not infer approved terrain or imagery from the completed Slice 1A shell.
 
 ---
 
@@ -494,13 +498,13 @@ PHASE 0.5 PR
 #2 — MERGED
 
 CURRENT PHASE
-Phase 1 specification approved; implementation not started
+Phase 1 in progress — Slice 1A complete / PR #5 approved for merge
 
 PRIMARY CURRENT GOAL
-Merge the approved Phase 1 specification through PR #4 without implementation code
+Merge the approved Slice 1A public 3D shell baseline
 
 PHASE 1
-NOT STARTED / AUTHORIZATION EFFECTIVE ON PR #4 MERGE
+IN PROGRESS / SLICE 1A COMPLETE
 
 ARCHITECTURE
 FROZEN
@@ -512,5 +516,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-After PR #4 passes required CI and merges, begin Slice 1A on a separate implementation branch.
+After PR #5 merge: Slice 1B — published terrain, through a separate gated change.
 ```

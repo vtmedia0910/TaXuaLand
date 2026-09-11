@@ -64,6 +64,10 @@ test("public search selects real API marker and displays UNKNOWN without leaking
     "true",
     { timeout: 60000 },
   );
+  await expect(page.getByTestId("map-shell")).toHaveAttribute(
+    "data-panel-state",
+    "default",
+  );
   await page.getByLabel("Tìm địa điểm", { exact: true }).fill("dinh kiem thu");
   await page.getByRole("button", { name: "Tìm kiếm", exact: true }).click();
   await page.getByRole("button", { name: /Đỉnh kiểm thử giao diện/ }).click();

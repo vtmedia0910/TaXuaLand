@@ -13,6 +13,12 @@ test("corrupt terrain manifest fails closed while place search remains usable", 
     { timeout: 60000 },
   );
   await expect(
+    page.getByText(
+      "Địa hình lỗi; lớp nền hiện tại không dùng để đánh giá địa hình",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
     page.getByRole("button", { name: "Tìm kiếm", exact: true }),
   ).toBeEnabled();
 });
@@ -53,6 +59,7 @@ test("real bounded DEM and OSM roads render with attribution, stable camera and 
   const navigation = await page.evaluate(
     () => performance.getEntriesByType("navigation").length,
   );
+  await page.getByRole("button", { name: "Mở lớp bản đồ" }).click();
   await page.getByLabel("Đường", { exact: true }).uncheck();
   await page.getByLabel("Đường", { exact: true }).check();
   await page.getByLabel("Địa hình", { exact: true }).uncheck();
