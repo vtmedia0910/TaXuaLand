@@ -46,6 +46,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     roadLayer = useRef<Cesium.DataSource | null>(null),
     terrain = useRef<Cesium.TerrainProvider | null>(null),
     cameraTransition = useRef(0),
+    cameraMoving = useRef(false),
     callbacks = useRef(props);
   const telemetry = useRef<ViewerDiagnostics | null>(null);
   const reducedMotion = useRef(false);
@@ -61,6 +62,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     [cameraMotion, setCameraMotion] = useState<
       "IDLE" | "ANIMATED" | "REDUCED" | "INTERRUPTED"
     >("IDLE"),
+    [cameraComplete, setCameraComplete] = useState(false),
     [notice, setNotice] = useState(""),
     [layerReadiness, setLayerReadiness] = useState(() =>
       initialLayerReadiness(props.config),
@@ -190,6 +192,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           roll: 0,
         },
       });
+      setCameraComplete(true);
       const points = new Cesium.CustomDataSource("LAND places");
       points.clustering.enabled = true;
       points.clustering.pixelRange = 50;
@@ -223,6 +226,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       handler.setInputAction((event: { position: Cesium.Cartesian2 }) => {
         cameraTransition.current++;
         v.camera.cancelFlight();
+        cameraMoving.current = false;
         setCameraMotion("INTERRUPTED");
         if (!callbacks.current.picker) return;
         const selected = v.scene.pick(event.position);
@@ -246,6 +250,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       const interruptFlight = () => {
         cameraTransition.current++;
         v.camera.cancelFlight();
+        cameraMoving.current = false;
         setCameraMotion("INTERRUPTED");
       };
       for (const eventType of [
@@ -285,18 +290,18 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       setReady(true);
       setGeneration((value) => value + 1);
       emit();
-      let cameraMoving = false;
       let stableFrames = 0;
       cleanup.push(
         v.camera.moveStart.addEventListener(() => {
-          cameraMoving = true;
+          cameraMoving.current = true;
+          setCameraComplete(false);
           setSettled(false);
         }),
       );
       cleanup.push(
         v.camera.moveEnd.addEventListener(() => {
-          cameraMoving = false;
-          setSettled(true);
+          cameraMoving.current = false;
+          setCameraComplete(true);
           v.scene.requestRender();
         }),
       );
@@ -306,7 +311,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           `tiles:${v.scene.globe.tilesLoaded};data:${v.dataSourceDisplay.ready};frames:${Math.min(stableFrames, 2)}`,
         );
         if (
-          !cameraMoving &&
+          !cameraMoving.current &&
           v.scene.globe.tilesLoaded &&
           v.dataSourceDisplay.ready &&
           (!props.config.terrainUrl ||
@@ -314,7 +319,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           (!props.config.roadsUrl || diagnostics.layers.roads === "READY")
         ) {
           stableFrames++;
-          if (stableFrames >= 2) setSettled(true);
+          setSettled(stableFrames >= 2);
           if (stableFrames >= 2 && diagnostics.firstStableFrameMs === null) {
             diagnostics.firstStableFrameMs = Math.round(
               performance.now() - start,
@@ -324,6 +329,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           if (stableFrames === 1) v.scene.requestRender();
         } else {
           stableFrames = 0;
+          setSettled(false);
           if (
             diagnostics.layers.terrain !== "FAILED" &&
             diagnostics.layers.roads !== "FAILED"
@@ -577,6 +583,8 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     if (v && !v.isDestroyed()) {
       const transition = ++cameraTransition.current;
       v.camera.cancelFlight();
+      cameraMoving.current = frame.durationSeconds !== 0;
+      setCameraComplete(false);
       setSettled(false);
       setCameraMotion(frame.durationSeconds === 0 ? "REDUCED" : "ANIMATED");
       const view = {
@@ -593,6 +601,8 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       };
       if (frame.durationSeconds === 0) {
         v.camera.setView(view);
+        cameraMoving.current = false;
+        setCameraComplete(true);
         v.scene.requestRender();
       } else
         v.camera.flyTo({
@@ -601,7 +611,8 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           complete: () => {
             if (cameraTransition.current !== transition) return;
             cameraTransition.current++;
-            setSettled(true);
+            cameraMoving.current = false;
+            setCameraComplete(true);
             v.scene.requestRender();
           },
         });
@@ -612,7 +623,8 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           cameraTransition.current++;
           v.camera.cancelFlight();
           v.camera.setView(view);
-          setSettled(true);
+          cameraMoving.current = false;
+          setCameraComplete(true);
           v.scene.requestRender();
         }, frame.durationSeconds * 1000 + 250);
     }
@@ -625,6 +637,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         data-ready={ready && !failed ? "true" : "false"}
         data-cesium-state={failed ? "FAILED" : ready ? "READY" : "INITIALIZING"}
         data-camera-motion={cameraMotion}
+        data-camera-complete={cameraComplete ? "true" : "false"}
         data-settled={settled ? "true" : "false"}
         data-focused-id={focusedId ?? ""}
         data-terrain-status={layerReadiness.terrain}

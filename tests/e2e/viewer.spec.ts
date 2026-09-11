@@ -30,7 +30,7 @@ test("Cesium shell, layer controls, camera reset and mobile viewport", async ({
     .evaluate((canvas) => Reflect.set(window, "__landViewerCanvas", canvas));
   await page.getByRole("button", { name: "Đặt lại góc nhìn" }).click();
   await expect(page.getByTestId("spatial-viewer")).toHaveAttribute(
-    "data-settled",
+    "data-camera-complete",
     "true",
   );
   expect(await page.locator(".cesium-host canvas").count()).toBe(1);
@@ -51,7 +51,7 @@ test("Cesium shell, layer controls, camera reset and mobile viewport", async ({
   await page.mouse.up();
   await expect(viewer).toHaveAttribute("data-camera-motion", "INTERRUPTED");
   await page.getByRole("button", { name: "Đặt lại góc nhìn" }).click();
-  await expect(viewer).toHaveAttribute("data-settled", "true");
+  await expect(viewer).toHaveAttribute("data-camera-complete", "true");
   expect(
     await page.evaluate(
       () => performance.getEntriesByType("navigation").length,
@@ -101,5 +101,5 @@ test("reduced motion reaches the regional frame without a normal flight", async 
   });
   await page.getByRole("button", { name: "Đặt lại góc nhìn" }).click();
   await expect(viewer).toHaveAttribute("data-camera-motion", "REDUCED");
-  await expect(viewer).toHaveAttribute("data-settled", "true");
+  await expect(viewer).toHaveAttribute("data-camera-complete", "true");
 });
