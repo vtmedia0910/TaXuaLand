@@ -1005,15 +1005,20 @@ Staging / Candidate
 Human review
 ↓
 Place domain mutation
-↓
-Verification
-↓
-Publication
-↓
+├──→ Verification / trust state
+│     (independent; may remain UNKNOWN and may change over time)
+└──→ Publication decision
+      (independent publication/source eligibility gates)
+      ↓
 Public-safe projection
 ↓
 Search / Map / Place Drawer
 ```
+
+- Verification does not gate publication unless a specific repository policy explicitly says so.
+- Publication does not imply verification; a public Place may legitimately be Published + Unknown/Declared/Verified.
+- Verification and trust updates may occur independently before or after publication.
+- Public projection remains subject to independent publication, source and public-safety gates and must expose the current safe trust summary.
 
 ```text
 Import != Verification

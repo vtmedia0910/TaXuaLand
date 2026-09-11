@@ -308,7 +308,7 @@ Series 00 also establishes the intended white/light application surfaces, deep-n
 | PLC-011 | Media | Editor/Admin | Associate media | Media metadata | Media relation | Media | Media/domain storage | Media API | Authorized | Storage | Current foundation | Public/private rules applied |
 | PLC-012 | Source linkage | Editor/Admin | Attach provenance | Source ref | Provenance relation | Source | Source Registry | Source API | Authorized | Source domain | Current foundation | Authority recorded |
 | PLC-013 | Verification linkage | Reviewer | View/manage trust state | Verification records | Verification summary | Verification | Verification domain | Verification API | Reviewer | Series 03 | Current foundation | Place UI does not implement independent verification semantics |
-| PLC-014 | Publication | Publisher/Admin | Control public availability | Eligible Place | Publication state | Publication | Publication policy | Publication service | Authorized | Verification/source | Current foundation | Publication independent from verification |
+| PLC-014 | Publication | Publisher/Admin | Control public availability | Eligible Place | Publication state | Publication | Publication policy | Publication service | Authorized | Source/public-safety policy | Current foundation | Publication independent from verification |
 | PLC-015 | History/versioning | Admin/Reviewer | Inspect changes | Place ID | Timeline | Audit/history | Domain/audit store | Read API | Authorized | Audit | Current foundation | Geometry history retained |
 | PLC-016 | Advanced filters | Admin | Find operational subsets | Filters | Result subset | Query | Place domain | Search/filter API | Admin | PLC-002 | Current foundation | No state conflation |
 | PLC-017 | Reporting/summary | Admin | Operational Place summary | Place dataset | Report | Read model | Domain APIs | Reporting API | Admin | Place | Future/current partial | No sample counts hard-coded |
@@ -588,12 +588,15 @@ IMP-002 Upload
 → IMP-013 Review
 → IMP-014 Commit
 → PLC-005/006 Place
-→ VER-* Verification
-→ PLC-014 Publication
-→ PUB-006 Search
-→ PUB-004 Marker
-→ PUB-009 Place Drawer
+├──→ VER-* Verification / trust lifecycle
+│     (independent; may remain UNKNOWN and may change before or after publication)
+└──→ PLC-014 Publication
+      → PUB-006 Search
+      → PUB-004 Marker
+      → PUB-009 Place Drawer
 ```
+
+`VER-*` may enrich or change trust state independently and does not need to complete before publication. Publication and public projection remain subject to their independent source, eligibility and public-safety gates.
 
 Critical semantic stops:
 
@@ -605,6 +608,10 @@ VER-012 Verified
 VER-012 Verified
 does not imply
 PLC-014 Published
+
+PLC-014 Published
+does not imply
+VER-012 Verified
 ```
 
 ## 14.2 Terrain Source to Cesium
