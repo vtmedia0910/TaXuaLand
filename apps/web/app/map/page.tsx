@@ -29,11 +29,7 @@ export default function MapPage({
           <Link href="/admin">Admin</Link>
         </nav>
       </header>
-      <main
-        className="map-page"
-        data-testid="map-shell"
-        data-shell-state="READY"
-      >
+      <main className="map-page">
         <h1 className="sr-only">Khám phá không gian Tà Xùa</h1>
         <Suspense fallback={<ExplorerLoading />}>
           <ExplorerData searchParams={searchParams} />
@@ -64,7 +60,12 @@ async function ExplorerData({
 
 function ExplorerLoading() {
   return (
-    <section className="explorer" aria-label="Bản đồ và địa điểm công khai">
+    <section
+      className="explorer"
+      data-testid="map-shell"
+      data-shell-state="INITIALIZING"
+      aria-label="Bản đồ và địa điểm công khai"
+    >
       <div className="explorer-map">
         <div className="spatial-viewer viewer-loading" role="status">
           <strong>Đang chuẩn bị không gian Tà Xùa</strong>

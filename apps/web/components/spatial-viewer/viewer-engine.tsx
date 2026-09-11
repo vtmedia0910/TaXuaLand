@@ -39,6 +39,19 @@ function hasWebGlSupport() {
     (canvas.getContext("webgl2") || canvas.getContext("webgl")),
   );
 }
+
+function cameraFrameValue(camera: Cesium.Camera) {
+  const position = camera.positionCartographic;
+  const heading = ((Cesium.Math.toDegrees(camera.heading) % 360) + 360) % 360;
+  return [
+    Cesium.Math.toDegrees(position.longitude).toFixed(5),
+    Cesium.Math.toDegrees(position.latitude).toFixed(5),
+    position.height.toFixed(1),
+    heading.toFixed(2),
+    Cesium.Math.toDegrees(camera.pitch).toFixed(2),
+  ].join(",");
+}
+
 export default function ViewerEngine(props: SpatialViewerProps) {
   const host = useRef<HTMLDivElement>(null),
     viewer = useRef<Cesium.Viewer | null>(null),
@@ -63,6 +76,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       "IDLE" | "ANIMATED" | "REDUCED" | "INTERRUPTED"
     >("IDLE"),
     [cameraComplete, setCameraComplete] = useState(false),
+    [cameraFrame, setCameraFrame] = useState(""),
     [notice, setNotice] = useState(""),
     [layerReadiness, setLayerReadiness] = useState(() =>
       initialLayerReadiness(props.config),
@@ -121,10 +135,12 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       setLayerReadiness({ ...diagnostics.layers });
       emit();
     };
-    const failUsableLayers = () => {
-      for (const layer of layers)
-        if (diagnostics.layers[layer.id] !== "UNAVAILABLE")
-          diagnostics.layers[layer.id] = "FAILED";
+    const failRenderableLayers = () => {
+      for (const id of ["terrain", "imagery", "roads"] as const)
+        if (diagnostics.layers[id] !== "UNAVAILABLE")
+          diagnostics.layers[id] = "FAILED";
+      diagnostics.layers.places =
+        callbacks.current.placesReadiness ?? diagnostics.layers.places;
       setLayerReadiness({ ...diagnostics.layers });
     };
     async function initialize() {
@@ -191,6 +207,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           roll: 0,
         },
       });
+      setCameraFrame(cameraFrameValue(v.camera));
       setCameraComplete(true);
       const points = new Cesium.CustomDataSource("LAND places");
       points.clustering.enabled = true;
@@ -345,7 +362,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         v.scene.renderError.addEventListener(() => {
           diagnostics.clientErrors++;
           diagnostics.webgl = false;
-          failUsableLayers();
+          failRenderableLayers();
           setReady(false);
           setFailureReason("CESIUM_FAILED");
           emit();
@@ -451,7 +468,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     initialize().catch((error: unknown) => {
       if (!disposed) {
         diagnostics.clientErrors++;
-        failUsableLayers();
+        failRenderableLayers();
         setReady(false);
         setFailed(true);
         setFailureReason(
@@ -474,11 +491,11 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     };
   }, [props.config, props.forceFallback, retry]);
   useEffect(() => {
-    if (!ready || !props.placesReadiness || !telemetry.current) return;
+    if (!props.placesReadiness || !telemetry.current) return;
     telemetry.current.layers.places = props.placesReadiness;
     setLayerReadiness({ ...telemetry.current.layers });
     callbacks.current.onDiagnostics?.({ ...telemetry.current });
-  }, [ready, props.placesReadiness]);
+  }, [props.placesReadiness]);
   useEffect(() => {
     const v = viewer.current,
       ds = placeLayer.current;
@@ -601,6 +618,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       if (frame.durationSeconds === 0) {
         v.camera.setView(view);
         cameraMoving.current = false;
+        setCameraFrame(cameraFrameValue(v.camera));
         setCameraComplete(true);
         v.scene.requestRender();
       } else
@@ -611,6 +629,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
             if (cameraTransition.current !== transition) return;
             cameraTransition.current++;
             cameraMoving.current = false;
+            setCameraFrame(cameraFrameValue(v.camera));
             setCameraComplete(true);
             v.scene.requestRender();
           },
@@ -624,6 +643,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
             v.camera.cancelFlight();
             v.camera.setView(view);
             cameraMoving.current = false;
+            setCameraFrame(cameraFrameValue(v.camera));
             setCameraComplete(true);
             v.scene.requestRender();
           },
@@ -640,6 +660,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         data-cesium-state={failed ? "FAILED" : ready ? "READY" : "INITIALIZING"}
         data-camera-motion={cameraMotion}
         data-camera-complete={cameraComplete ? "true" : "false"}
+        data-camera-frame={cameraFrame}
         data-settled={settled ? "true" : "false"}
         data-focused-id={focusedId ?? ""}
         data-terrain-status={layerReadiness.terrain}

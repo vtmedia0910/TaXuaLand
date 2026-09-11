@@ -77,7 +77,7 @@ ACTIVE SLICE: 1A — PUBLIC 3D SHELL + REGIONAL CAMERA + DEGRADED-STATE BASELINE
 
 The owner approved the Phase 1 specification and its four scope/data-readiness decisions on 2026-09-11. PR #4 merged the documentation-only specification; Slice 1A is the first authorized implementation work.
 
-PR #5 remains open and unmerged. Its current local Slice 1A amendment converges `/map` toward the canonical map-first desktop and mobile experience while keeping the neutral reference grid distinct from approved imagery. Local validation completed with `pnpm check`, the isolated 10-test core E2E suite, focused normal/degraded/reduced-motion viewer checks, and desktop/mobile visual inspection. Required remote CI must be re-checked after the amendment is pushed.
+PR #5 remains open and unmerged. Its current local Slice 1A amendment converges `/map` toward the canonical map-first desktop and mobile experience while keeping the neutral reference grid distinct from approved imagery. Local validation completed with `pnpm check`, the isolated 10-test core E2E suite, focused normal/degraded/reduced-motion viewer checks, and side-by-side desktop/mobile inspection against Series 00/01/08. No major visual discrepancy remains inside Slice 1A; real approved imagery and terrain remain governed data-readiness work, not a presentation claim. Required remote CI must be re-checked after the amendment is pushed.
 
 The current architecture freeze remains in force. The approved specification extends it without reopening the frozen authority, publication, verification, provenance, security, or provider boundaries.
 

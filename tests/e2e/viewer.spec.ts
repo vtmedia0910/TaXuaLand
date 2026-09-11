@@ -1,4 +1,6 @@
 import { expect, test } from "../support/browser";
+import { LAND_VIEWER_BASE } from "../../packages/config/src/viewer";
+
 test("Cesium shell, layer controls, camera reset and mobile viewport", async ({
   page,
 }) => {
@@ -6,10 +8,9 @@ test("Cesium shell, layer controls, camera reset and mobile viewport", async ({
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/map");
-  await expect(page.getByTestId("map-shell")).toHaveAttribute(
-    "data-shell-state",
-    "READY",
-  );
+  await expect(
+    page.locator('[data-testid="map-shell"][data-shell-state="READY"]'),
+  ).toBeVisible();
   await expect(page.getByTestId("spatial-viewer")).toHaveAttribute(
     "data-ready",
     "true",
@@ -21,19 +22,42 @@ test("Cesium shell, layer controls, camera reset and mobile viewport", async ({
   await expect(viewer).toHaveAttribute("data-imagery-status", "UNAVAILABLE");
   await expect(viewer).toHaveAttribute("data-roads-status", "UNAVAILABLE");
   await expect(viewer).toHaveAttribute("data-places-status", "READY");
+  const expectRegionalCamera = async () => {
+    const values = (await viewer.getAttribute("data-camera-frame"))
+      ?.split(",")
+      .map(Number);
+    expect(values).toHaveLength(5);
+    expect(values![0]).toBeCloseTo(LAND_VIEWER_BASE.initialView.longitude, 4);
+    expect(values![1]).toBeCloseTo(LAND_VIEWER_BASE.initialView.latitude, 4);
+    expect(values![2]).toBeCloseTo(
+      LAND_VIEWER_BASE.initialView.heightMeters,
+      0,
+    );
+    expect(values![3]).toBeCloseTo(0, 1);
+    expect(values![4]).toBeCloseTo(-55, 1);
+  };
+  await expectRegionalCamera();
   const navigationCount = await page.evaluate(
     () => performance.getEntriesByType("navigation").length,
   );
-  await page.getByLabel("Lưới tham chiếu", { exact: true }).uncheck();
-  await page.getByLabel("Lưới tham chiếu", { exact: true }).check();
+  const referenceGrid = page.getByLabel("Lưới tham chiếu", { exact: true });
+  await referenceGrid.focus();
+  await expect(referenceGrid).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(referenceGrid).not.toBeChecked();
+  await page.keyboard.press("Space");
+  await expect(referenceGrid).toBeChecked();
   await page
     .locator(".cesium-host canvas")
     .evaluate((canvas) => Reflect.set(window, "__landViewerCanvas", canvas));
-  await page.getByRole("button", { name: "Đặt lại góc nhìn" }).click();
+  const reset = page.getByRole("button", { name: "Đặt lại góc nhìn" });
+  await reset.focus();
+  await page.keyboard.press("Enter");
   await expect(page.getByTestId("spatial-viewer")).toHaveAttribute(
     "data-camera-complete",
     "true",
   );
+  await expectRegionalCamera();
   expect(await page.locator(".cesium-host canvas").count()).toBe(1);
   expect(
     await page
@@ -95,10 +119,20 @@ test("WebGL unavailable yields a usable fallback", async ({ page }) => {
     "data-cesium-state",
     "FAILED",
   );
+  await expect(page.getByTestId("spatial-viewer")).toHaveAttribute(
+    "data-places-status",
+    "READY",
+  );
   const retry = page.getByRole("button", { name: "Thử lại bản đồ 3D" });
   await expect(retry).toBeVisible();
   await retry.focus();
   await expect(retry).toBeFocused();
+  await retry.click();
+  await expect(page.getByTestId("spatial-viewer")).toHaveAttribute(
+    "data-cesium-state",
+    "FAILED",
+  );
+  await expect(retry).toBeVisible();
   await expect(page.getByLabel("Tìm kiếm và thông tin địa điểm")).toBeVisible();
   await page.screenshot({ path: "work/qa-viewer-fallback.png" });
   await page.setViewportSize({ width: 390, height: 844 });

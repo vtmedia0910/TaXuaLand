@@ -105,7 +105,7 @@ function Explorer({ config, categories, initialSlug }: Props) {
     window.history.pushState(null, "", url);
   };
   return (
-    <div className="explorer">
+    <div className="explorer" data-testid="map-shell" data-shell-state="READY">
       <div className="explorer-map">
         <SpatialViewer
           config={config}
