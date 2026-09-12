@@ -74,7 +74,7 @@ SPECIFICATION APPROVED
 PR #4 MERGED
 SLICE 1A: COMPLETE — PR #5 MERGED
 ACTIVE SLICE: 1B — PUBLISHED TERRAIN
-SLICE 1B: TEMPORARY RUNTIME PATH READY FOR FINAL REVIEW / NOT PUBLISHED
+SLICE 1B: RUNTIME PATH MERGED VIA PR #8 / NOT PUBLISHED
 PRODUCTION TERRAIN: DELIVERED / APPROVED / NOT PUBLISHED
 ```
 
@@ -90,7 +90,7 @@ The owner accepts the existing Cloudflare R2 `r2.dev` origin as temporary Phase 
 
 The Slice 1B change adds the missing authenticated, same-origin Admin Release publication endpoint and the minimal APPROVED-only Dataset control. It delegates UUID, configure permission, delivery, status, rights, provider and audit enforcement to the existing `publishRelease()` service, which now fails closed for unsupported Dataset kinds outside `TERRAIN` and `ROADS`. `pnpm check` passed with 144 tests plus build and secret scan; `pnpm test:e2e:core` passed all 10 browser tests. No production Release or provider configuration was mutated. The execution environment exposes local `.git` as read-only, so delivery uses an isolated exact-path commit payload for the dedicated remote feature branch without touching unrelated workspace data.
 
-PR #8 is open and unmerged. Its implementation head passed the required GitHub `check` and `e2e-core` jobs and Vercel Preview. These results establish code/runtime-path readiness only; production terrain publication and browser validation remain separately gated.
+PR #8 is merged at `abf169d75484fdfac612f0ab632eee39ed25442e`. Its reviewed implementation head `491f28f61f9d9eb16f0511e3161966b84372d25a` passed the required GitHub `check` and `e2e-core` jobs and Vercel Preview. These results establish code/runtime-path readiness only; production terrain publication and browser validation remain separately gated.
 
 The current architecture freeze remains in force. The approved specification extends it without reopening the frozen authority, publication, verification, provenance, security, or provider boundaries.
 
@@ -448,7 +448,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-Complete owner final review of PR #8 without auto-merging. After review/merge, set the Vercel runtime's non-secret `PUBLIC_ASSET_BASE_URL` to the exact temporary receipt origin, separately authorize publishing `TX-DEM-2026-001`, and validate real terrain in the deployed browser. Imagery remains `UNAVAILABLE`; do not start Slice 1C.
+Ready for production runtime configuration. Set the Vercel runtime's non-secret `PUBLIC_ASSET_BASE_URL` to the exact temporary receipt origin, separately authorize publishing `TX-DEM-2026-001`, and validate real terrain in the deployed browser. Imagery remains `UNAVAILABLE`; do not start Slice 1C.
 
 ---
 
@@ -517,10 +517,10 @@ CURRENT PHASE
 Phase 1 in progress — Slice 1A complete / merged; Slice 1B delivered and APPROVED, not published
 
 PRIMARY CURRENT GOAL
-Deliver the verified bounded Release publication path through its dedicated PR without publishing yet
+Configure the merged bounded Release publication path without publishing yet
 
 PHASE 1
-IN PROGRESS / SLICE 1A COMPLETE / SLICE 1B DELIVERED + APPROVED / NOT PUBLISHED / BROWSER VALIDATION PENDING
+IN PROGRESS / SLICE 1A COMPLETE / SLICE 1B RUNTIME PATH MERGED + RELEASE APPROVED / NOT PUBLISHED / BROWSER VALIDATION PENDING
 
 ARCHITECTURE
 FROZEN
@@ -532,5 +532,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-Owner final review of PR #8, then separately authorize temporary r2.dev publication and browser validation after merge; do not start Slice 1C.
+READY FOR PRODUCTION RUNTIME CONFIGURATION; publication and browser validation remain separately gated; do not start Slice 1C.
 ```
