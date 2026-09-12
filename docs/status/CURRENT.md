@@ -1,7 +1,7 @@
 # TÀ XÙA LAND — CURRENT STATUS
 
 Status: Mutable operational snapshot
-Last reconciled: 2026-09-11
+Last reconciled: 2026-09-12
 Repository: `vtmedia0910/TaXuaLand`
 Local workspace: `C:\Projects\TaXuaLand`
 
@@ -29,7 +29,7 @@ MERGED
 
 PR #2 is merged into `main`, and the agent-workflow documentation layer is installed through its separate documentation-only migration. Phase 0 architecture remains frozen. Re-check Git for the current `main` HEAD rather than treating the Phase 0.5 merge baseline as the latest repository SHA.
 
-The approved Phase 1 specification is merged through PR #4. Slice 1A is complete and merged through PR #5. Phase 1 remains in progress; Slice 1B terrain data-readiness enablement is ready for review, while the production DATA READY gate remains blocked pending separately authorized registration/delivery/publication.
+The approved Phase 1 specification is merged through PR #4. Slice 1A is complete and merged through PR #5. Phase 1 remains in progress. The production Source and `TX-DEM-2026-001` Release are registered, the Release is `APPROVED`, and all 342 immutable R2 objects plus the origin-specific delivery receipt are verified. Public projection remains intentionally empty because `APPROVED != PUBLISHED`.
 
 ### Local-state boundary
 
@@ -74,17 +74,23 @@ SPECIFICATION APPROVED
 PR #4 MERGED
 SLICE 1A: COMPLETE — PR #5 MERGED
 ACTIVE SLICE: 1B — PUBLISHED TERRAIN
-SLICE 1B: DATA READINESS ENABLEMENT READY FOR REVIEW
-PRODUCTION TERRAIN: DATA READY BLOCKED
+SLICE 1B: TEMPORARY RUNTIME PATH READY FOR FINAL REVIEW / NOT PUBLISHED
+PRODUCTION TERRAIN: DELIVERED / APPROVED / NOT PUBLISHED
 ```
 
 The owner approved the Phase 1 specification and its four scope/data-readiness decisions on 2026-09-11. PR #4 merged the documentation-only specification; PR #5 subsequently merged the completed Slice 1A public 3D shell.
 
 Owner final screenshot review passed for Series 00, 01, and 08, and required remote CI passed on the reviewed PR #5 head. Functional, visual, scope, architecture, and E2E review are PASS; Slice 1A is complete and merged. The neutral reference grid remains the honest fallback: Slice 1A does not imply that any terrain or imagery source/release is approved.
 
-Slice 1B discovery on 2026-09-11 found that the production public-layer contract returns HTTP 200 but exposes `terrainUrl`, `terrainRelease`, and `terrainChecksum` as `null`. The exact Phase 1 terrain release remains unselected, and the Phase 0.5 provider acceptance proved only the bounded diagnostic object lifecycle, not governed delivery of a terrain Release. The local `TX-DEM-2026-001` QA output is not production Dataset/Release/publication evidence.
+Production now contains Source `0633d396-ed73-4d00-880c-73a2d421e822`, Dataset `cb488e83-4b05-4842-94bc-50648b2220f5`, and Release `f2503940-5efa-4693-8ab8-26a3eb2e9602` (`TX-DEM-2026-001`). The Release is `APPROVED`, `published_at` is `NULL`, and verification and accuracy remain `UNKNOWN`. Its checksum is `ff17bcb5a85ddd31e47b7e2d8e6742819f3aacb47ca8a3a611dc5c0a859eb5e6`; coverage is `[104.3, 21.05, 104.8, 21.55]`, CRS is `EPSG:4326`, vertical datum is `WGS84_ELLIPSOID`, and resolution is 60 m.
 
-The bounded data-readiness enablement now provides an operator-only registration gate that validates the existing build and creates only an `APPROVED` Release with asset descriptors, completed pipeline evidence and audit. The actual candidate passed this gate in disposable local PostGIS with 347 registered descriptors, `published_at=null`, and no delivery receipt. The owner approved the proposed Source rights as a product-governance decision, not an external legal opinion; `legalReviewedAt` remains `null`. No runtime, provider, schema, production data, R2, delivery or publication mutation was performed. Production remains DATA READY BLOCKED until the owner explicitly authorizes production registration, reviews the resulting exact Release identity, and separately authorizes delivery/publication.
+The published R2 bucket contains 342/342 verified immutable objects: one manifest and 341 terrain tiles, with zero conflicts. Anonymous manifest GET/HEAD, representative tile GET, immutable cache control, and CORS for `https://ta-xua-land-web.vercel.app` passed. Exactly one `spatial_object_deliveries` receipt and one `DATASET_OBJECT_DELIVERED` audit event exist. `publicLayers()` correctly still returns null terrain fields because the Release is not `PUBLISHED`.
+
+The owner accepts the existing Cloudflare R2 `r2.dev` origin as temporary Phase 1B public infrastructure through non-secret `PUBLIC_ASSET_BASE_URL` configuration. It is not the final production CDN. A custom asset domain is deferred; migration must reuse the same immutable Release/bytes with delivery/readback and a second origin-specific receipt. No terrain rebuild, new Dataset, or application rewrite is required.
+
+The Slice 1B change adds the missing authenticated, same-origin Admin Release publication endpoint and the minimal APPROVED-only Dataset control. It delegates UUID, configure permission, delivery, status, rights, provider and audit enforcement to the existing `publishRelease()` service, which now fails closed for unsupported Dataset kinds outside `TERRAIN` and `ROADS`. `pnpm check` passed with 144 tests plus build and secret scan; `pnpm test:e2e:core` passed all 10 browser tests. No production Release or provider configuration was mutated. The execution environment exposes local `.git` as read-only, so delivery uses an isolated exact-path commit payload for the dedicated remote feature branch without touching unrelated workspace data.
+
+PR #8 is open and unmerged. Its implementation head passed the required GitHub `check` and `e2e-core` jobs and Vercel Preview. These results establish code/runtime-path readiness only; production terrain publication and browser validation remain separately gated.
 
 The current architecture freeze remains in force. The approved specification extends it without reopening the frozen authority, publication, verification, provenance, security, or provider boundaries.
 
@@ -295,8 +301,8 @@ Current implementation state is bounded to:
 Slice 1A — COMPLETE / MERGED
 Public 3D shell + regional camera + degraded-state baseline
 
-Slice 1B — DATA READINESS ENABLEMENT READY FOR REVIEW
-Production DATA READY remains blocked; no governed terrain Release is currently exposed
+Slice 1B — TEMPORARY RUNTIME PATH READY FOR FINAL REVIEW / NOT PUBLISHED
+Production Release delivered and APPROVED; publication and browser terrain validation remain open
 ```
 
 The approved specification is merged through PR #4 and Slice 1A through PR #5. Do not use the future visual board or the blocked Slice 1B gate as authorization to implement imagery, Property, AI, full viewshed intelligence, or travel-commerce routing.
@@ -442,7 +448,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-Review the Slice 1B data-readiness enablement and proposed Source record. Production registration requires explicit owner rights and mutation authorization; later object delivery and publication remain separate approvals. Do not bind terrain until one exact eligible immutable published terrain Release is established; imagery remains `UNAVAILABLE` and Slice 1C has not started.
+Complete owner final review of PR #8 without auto-merging. After review/merge, set the Vercel runtime's non-secret `PUBLIC_ASSET_BASE_URL` to the exact temporary receipt origin, separately authorize publishing `TX-DEM-2026-001`, and validate real terrain in the deployed browser. Imagery remains `UNAVAILABLE`; do not start Slice 1C.
 
 ---
 
@@ -508,13 +514,13 @@ PHASE 0.5 PR
 #2 — MERGED
 
 CURRENT PHASE
-Phase 1 in progress — Slice 1A complete / merged; Slice 1B enablement ready for review
+Phase 1 in progress — Slice 1A complete / merged; Slice 1B delivered and APPROVED, not published
 
 PRIMARY CURRENT GOAL
-Final-review the operator-only APPROVED terrain registration gate
+Deliver the verified bounded Release publication path through its dedicated PR without publishing yet
 
 PHASE 1
-IN PROGRESS / SLICE 1A COMPLETE / SLICE 1B DATA READINESS ENABLEMENT READY FOR REVIEW
+IN PROGRESS / SLICE 1A COMPLETE / SLICE 1B DELIVERED + APPROVED / NOT PUBLISHED / BROWSER VALIDATION PENDING
 
 ARCHITECTURE
 FROZEN
@@ -526,5 +532,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-PR #7 final review, then separate production registration authorization; do not start Slice 1C.
+Owner final review of PR #8, then separately authorize temporary r2.dev publication and browser validation after merge; do not start Slice 1C.
 ```

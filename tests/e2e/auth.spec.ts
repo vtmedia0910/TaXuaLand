@@ -1,8 +1,44 @@
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
+import pg from "pg";
 import { expect, test } from "../support/browser";
-test("admin login, protected page and logout", async ({ page }) => {
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+test.afterAll(() => pool.end());
+test("admin login, release publication, protected pages and logout", async ({
+  page,
+}) => {
   test.setTimeout(120000);
   const clientErrors: string[] = [];
+  const version = `TX-ADMIN-${randomUUID()}`;
+  let release: string | undefined;
+  if (process.env.E2E_CORE === "1") {
+    const source = (
+      await pool.query(
+        "INSERT INTO sources(name,category,status,public_display,redistribution,derivatives,caching,license_reference) VALUES('Synthetic publication UI','OTHER','ACTIVE','ALLOWED','ALLOWED','ALLOWED','ALLOWED','https://example.invalid/license') RETURNING id",
+      )
+    ).rows[0].id;
+    const dataset = (
+      await pool.query(
+        "INSERT INTO datasets(code,name,kind,source_id) VALUES($1,'Synthetic publication UI','ROADS',$2) RETURNING id",
+        [randomUUID(), source],
+      )
+    ).rows[0].id;
+    release = (
+      await pool.query(
+        "INSERT INTO dataset_releases(dataset_id,version,source_version,pipeline_version,source_crs,target_crs,bbox,license,checksum,qa_status) VALUES($1,$2,'fixture','test','EPSG:4326','EPSG:4326',ST_MakeEnvelope(104,21,105,22,4326),'Synthetic',repeat('a',64),'APPROVED') RETURNING id",
+        [dataset, version],
+      )
+    ).rows[0].id;
+    const key = `spatial/roads/${dataset}/${release}/roads.geojson`;
+    await pool.query(
+      "INSERT INTO dataset_assets(release_id,zone,object_key,checksum,byte_size,content_type,public_url) VALUES($1,'published',$2,repeat('a',64),1,'application/geo+json',$3)",
+      [release, key, `/${key}`],
+    );
+    await pool.query(
+      "INSERT INTO pipeline_runs(dataset_id,release_id,processing_version,status,manifest) VALUES($1,$2,'test','COMPLETED','{}')",
+      [dataset, release],
+    );
+  }
   page.on("pageerror", (error) => clientErrors.push(error.message));
   const credentials = JSON.parse(
     readFileSync(
@@ -33,6 +69,51 @@ test("admin login, protected page and logout", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Dataset & release", exact: true }),
   ).toBeVisible();
+  if (release) {
+    page.once("dialog", (dialog) => {
+      expect(dialog.message()).toBe(
+        `Xuất bản Release APPROVED ${version}? Release PUBLISHED trước đó của Dataset này (nếu có) sẽ chuyển thành RETIRED.`,
+      );
+      return dialog.accept();
+    });
+    await page
+      .getByRole("button", { name: `Xuất bản release ${version}` })
+      .click();
+    await expect(page.getByText("PUBLISHED", { exact: true })).toBeVisible();
+    expect(
+      (
+        await pool.query(
+          "SELECT id FROM audit_events WHERE subject_id=$1 AND action='DATASET_RELEASE_PUBLISHED'",
+          [release],
+        )
+      ).rowCount,
+    ).toBe(1);
+    expect(
+      await page.evaluate(
+        async () =>
+          (
+            await fetch("/api/admin/dataset-releases/not-a-uuid/publish", {
+              method: "POST",
+            })
+          ).status,
+      ),
+    ).toBe(400);
+    expect(
+      await page.evaluate(
+        async (release) =>
+          (
+            await fetch(`/api/admin/dataset-releases/${release}/publish`, {
+              method: "POST",
+            })
+          ).status,
+        release,
+      ),
+    ).toBe(409);
+    await pool.query(
+      "UPDATE dataset_releases SET qa_status='RETIRED' WHERE id=$1",
+      [release],
+    );
+  }
   await page.getByRole("link", { name: "Chẩn đoán", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Chẩn đoán hệ thống" }),

@@ -80,6 +80,10 @@ In S3 mode, the runtime ignores registry public_url values and derives URLs only
 
 Changing the CDN origin requires deliberate delivery/readback and a receipt for the new origin. Changing bucket mapping behind an existing origin requires operator verification; database receipts are not live provider-availability probes. Provider failure leaves the viewer's existing unavailable-layer/search fallback, not fabricated terrain.
 
+For initial Phase 1B operation, the owner accepts the configured Cloudflare R2 `r2.dev` public bucket origin as temporary infrastructure. It is supplied only through `PUBLIC_ASSET_BASE_URL`; it is not a final production CDN and must not become an application constant. The absence of a custom domain does not block functional terrain activation after publication and browser verification.
+
+When a final custom domain is available, attach its exact HTTPS origin to the same published bucket, rerun immutable delivery/readback for the same Release and bytes, create the new origin-specific receipt, then update `PUBLIC_ASSET_BASE_URL` in the operator and Vercel runtime environments. No terrain rebuild, new Dataset, byte mutation or application rewrite is required.
+
 ## Provider controls and acceptance still required
 
 - Published endpoint: GET/HEAD and only approved LAND origins in CORS. No browser PUT authority. Private bucket remains inaccessible anonymously.
