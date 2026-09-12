@@ -326,6 +326,17 @@ describe.skipIf(!process.env.DATABASE_TEST_URL)(
         publishRelease(actor, f.id, pool, env),
       ).rejects.toMatchObject({ code: "RELEASE_GATE" });
     });
+    it("rejects unsupported release kinds", async () => {
+      const f = await fixture("IMAGERY");
+      await expect(
+        publishRelease(actor, f.id, pool, {
+          ...env,
+          LAND_ENVIRONMENT: "LOCAL",
+          OBJECT_STORE_DRIVER: "local",
+          VERCEL: undefined,
+        }),
+      ).rejects.toMatchObject({ code: "RELEASE_GATE" });
+    });
     it("rejects publication when caching rights are revoked after delivery", async () => {
       const f = await fixture();
       await publishObjectRelease(pool, f.id, f.directory, store, base);

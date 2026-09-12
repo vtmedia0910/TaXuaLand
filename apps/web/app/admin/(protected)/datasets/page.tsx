@@ -55,7 +55,8 @@ export default async function Datasets() {
                     <td className="hash">{r.checksum}</td>
                     {canConfigure && (
                       <td>
-                        {r.qaStatus === "APPROVED" ? (
+                        {["TERRAIN", "ROADS"].includes(d.kind) &&
+                        r.qaStatus === "APPROVED" ? (
                           <ReleasePublishButton
                             releaseId={r.id}
                             version={r.version}
