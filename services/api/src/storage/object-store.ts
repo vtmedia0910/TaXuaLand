@@ -99,7 +99,11 @@ export interface ObjectStoreSigner {
 }
 const types: Record<string, string[]> = {
   xlsx: [XLSX_TYPE],
-  json: ["application/json", "application/vnd.land.terrain+json"],
+  json: [
+    "application/json",
+    "application/vnd.land.terrain+json",
+    "application/vnd.land.imagery+json",
+  ],
   geojson: ["application/geo+json"],
   bin: ["application/octet-stream"],
   terrain: ["application/octet-stream"],

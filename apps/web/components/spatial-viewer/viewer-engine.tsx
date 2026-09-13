@@ -9,6 +9,7 @@ import type {
 } from "../../../../packages/spatial-types/src/viewer";
 import type { SpatialViewerProps } from "./types";
 import { loadLandTerrain } from "./terrain-provider";
+import { loadLandImagery } from "./imagery-provider";
 import {
   cameraFlightDuration,
   initialLayerReadiness,
@@ -57,6 +58,8 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     viewer = useRef<Cesium.Viewer | null>(null),
     placeLayer = useRef<Cesium.CustomDataSource | null>(null),
     roadLayer = useRef<Cesium.DataSource | null>(null),
+    neutralImagery = useRef<Cesium.ImageryLayer | null>(null),
+    releaseImagery = useRef<Cesium.ImageryLayer | null>(null),
     terrain = useRef<Cesium.TerrainProvider | null>(null),
     cameraTransition = useRef(0),
     cameraMoving = useRef(false),
@@ -189,6 +192,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         }),
       );
       imagery.show = true;
+      neutralImagery.current = imagery;
       terrain.current = v.terrainProvider;
       v.scene.screenSpaceCameraController.minimumZoomDistance =
         props.config.minimumCameraHeight;
@@ -332,7 +336,10 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           v.dataSourceDisplay.ready &&
           (!props.config.terrainUrl ||
             diagnostics.layers.terrain === "READY") &&
-          (!props.config.roadsUrl || diagnostics.layers.roads === "READY")
+          (!props.config.roadsUrl || diagnostics.layers.roads === "READY") &&
+          (!props.config.imageryManifestUrl ||
+            diagnostics.layers.imagery === "READY" ||
+            diagnostics.layers.imagery === "FAILED")
         ) {
           stableFrames++;
           setSettled(stableFrames >= 2);
@@ -369,6 +376,66 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           setFailed(true);
         }),
       );
+      const imageryTask = (async () => {
+        if (!props.config.imageryManifestUrl) return;
+        try {
+          if (
+            !props.config.imageryChecksum ||
+            !props.config.imageryRelease ||
+            !props.config.imageryMetadata
+          )
+            throw Error("IMAGERY_CONFIG_INCOMPLETE");
+          const { provider, firstTileReady } = await loadLandImagery(
+            props.config.imageryManifestUrl,
+            props.config.imageryChecksum,
+            props.config.imageryRelease,
+            props.config.imageryMetadata,
+            controller.signal,
+          );
+          if (disposed) return;
+          const layer = v.imageryLayers.addImageryProvider(provider);
+          releaseImagery.current = layer;
+          layer.show = visibility.current.imagery;
+          let rejectInitialTile!: (error: unknown) => void;
+          let imageryReady = false;
+          const initialTileFailure = new Promise<never>((_, reject) => {
+            rejectInitialTile = reject;
+          });
+          cleanup.push(
+            provider.errorEvent.addEventListener((error) => {
+              if (!imageryReady) {
+                rejectInitialTile(error);
+                return;
+              }
+              diagnostics.failedRequests++;
+              layer.show = false;
+              imagery.show = true;
+              setLayer("imagery", "FAILED");
+              setNotice(
+                "Không tải được tile ảnh nền; đã trở về lưới tham chiếu trung tính.",
+              );
+              v.scene.requestRender();
+            }),
+          );
+          v.scene.requestRender();
+          await Promise.race([firstTileReady, initialTileFailure]);
+          if (disposed) return;
+          imageryReady = true;
+          imagery.show = !visibility.current.imagery;
+          setLayer("imagery", "READY");
+          v.scene.requestRender();
+        } catch {
+          if (disposed) return;
+          diagnostics.failedRequests++;
+          if (releaseImagery.current) releaseImagery.current.show = false;
+          imagery.show = true;
+          setLayer("imagery", "FAILED");
+          setNotice(
+            "Không tải được imagery release; đã trở về lưới tham chiếu trung tính.",
+          );
+          v.scene.requestRender();
+        }
+      })();
       if (props.config.terrainUrl) {
         try {
           if (!props.config.terrainChecksum)
@@ -433,11 +500,18 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         );
       if (props.config.roadsUrl) {
         try {
+          if (!props.config.roadsMetadata)
+            throw Error("ROADS_METADATA_REQUIRED");
+          const credit = document.createElement("span");
+          credit.textContent = `${props.config.roadsMetadata.attribution} · `;
+          const license = document.createElement("a");
+          license.href = props.config.roadsMetadata.licenseReference;
+          license.textContent = props.config.roadsMetadata.licenseName;
+          license.target = "_blank";
+          license.rel = "noopener noreferrer";
+          credit.append(license);
           v.creditDisplay.addStaticCredit(
-            new Cesium.Credit(
-              '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a> · <a href="https://opendatacommons.org/licenses/odbl/1-0/">ODbL</a>',
-              true,
-            ),
+            new Cesium.Credit(credit.innerHTML, true),
           );
           const roads = await Cesium.GeoJsonDataSource.load(
             props.config.roadsUrl,
@@ -460,6 +534,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           setNotice("Không tải được lớp đường.");
         }
       }
+      await imageryTask;
       emit();
       // Rebuild/focus after real providers replace the initial ellipsoid.
       setGeneration((value) => value + 1);
@@ -487,6 +562,8 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       viewer.current = null;
       placeLayer.current = null;
       roadLayer.current = null;
+      neutralImagery.current = null;
+      releaseImagery.current = null;
       terrain.current = null;
     };
   }, [props.config, props.forceFallback, retry]);
@@ -582,13 +659,24 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     if (!ready || !v || v.isDestroyed()) return;
     if (placeLayer.current) placeLayer.current.show = visible.places;
     if (roadLayer.current) roadLayer.current.show = visible.roads;
-    v.imageryLayers.get(0).show = visible.imagery;
+    const neutral = neutralImagery.current,
+      imagery = releaseImagery.current;
+    if (imagery && layerReadiness.imagery === "READY") {
+      imagery.show = visible.imagery;
+      if (neutral) neutral.show = !visible.imagery;
+    } else if (neutral) neutral.show = true;
     if (terrain.current)
       v.terrainProvider = visible.terrain
         ? terrain.current
         : new Cesium.EllipsoidTerrainProvider();
     v.scene.requestRender();
-  }, [ready, generation, visible]);
+  }, [
+    ready,
+    generation,
+    visible,
+    layerReadiness.imagery,
+    props.config.imageryManifestUrl,
+  ]);
   const reset = (overhead = false) => {
     const v = viewer.current,
       frame = regionalCameraFrame(
@@ -720,8 +808,18 @@ export default function ViewerEngine(props: SpatialViewerProps) {
                   <label className="map-tool-base">
                     <input
                       type="checkbox"
-                      aria-label="Lưới tham chiếu"
-                      checked={visible.imagery}
+                      aria-label={
+                        props.config.imageryRelease
+                          ? "Ảnh Sentinel-2"
+                          : "Lưới tham chiếu"
+                      }
+                      checked={
+                        props.config.imageryManifestUrl ? visible.imagery : true
+                      }
+                      disabled={
+                        !props.config.imageryManifestUrl ||
+                        layerReadiness.imagery === "INITIALIZING"
+                      }
                       onChange={(event) =>
                         setVisible((value) => ({
                           ...value,
@@ -730,8 +828,14 @@ export default function ViewerEngine(props: SpatialViewerProps) {
                       }
                     />
                     <span>
-                      Lưới tham chiếu
-                      <small>Nền trung tính đang dùng</small>
+                      {props.config.imageryRelease
+                        ? "Ảnh Sentinel-2"
+                        : "Lưới tham chiếu"}
+                      <small>
+                        {props.config.imageryRelease
+                          ? readinessLabels[layerReadiness.imagery]
+                          : "Nền trung tính đang dùng"}
+                      </small>
                     </span>
                   </label>
                   {layers
@@ -802,15 +906,18 @@ export default function ViewerEngine(props: SpatialViewerProps) {
                 Đang khởi tạo Cesium…
               </div>
             )}
-            {(layerReadiness.terrain === "FAILED" ||
+            {(layerReadiness.imagery === "FAILED" ||
+              layerReadiness.terrain === "FAILED" ||
               (layerReadiness.terrain === "UNAVAILABLE" &&
                 layerReadiness.imagery === "UNAVAILABLE")) && (
               <p className="map-fallback-label">
                 <strong>Lưới tham chiếu</strong>
                 <span>
-                  {layerReadiness.terrain === "FAILED"
-                    ? "Địa hình lỗi; lớp nền hiện tại không dùng để đánh giá địa hình"
-                    : "Địa hình và ảnh nền thực chưa khả dụng"}
+                  {layerReadiness.imagery === "FAILED"
+                    ? "Ảnh nền lỗi; đang dùng lưới tham chiếu trung tính"
+                    : layerReadiness.terrain === "FAILED"
+                      ? "Địa hình lỗi; lớp nền hiện tại không dùng để đánh giá địa hình"
+                      : "Địa hình và ảnh nền thực chưa khả dụng"}
                 </span>
               </p>
             )}
@@ -836,6 +943,56 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           <p>
             Cao độ xử lý không xác minh thực địa; độ chính xác tại địa điểm:
             UNKNOWN.
+          </p>
+        </details>
+      )}
+      {props.config.imageryMetadata && (
+        <details className="terrain-attribution">
+          <summary>Nguồn ảnh · {props.config.imageryRelease}</summary>
+          <p>
+            {props.config.imageryMetadata.attribution} ·{" "}
+            <a
+              href={props.config.imageryMetadata.licenseReference}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {props.config.imageryMetadata.licenseName}
+            </a>
+          </p>
+          <p>
+            Source: {props.config.imageryMetadata.sourceName}. Sensing:{" "}
+            {props.config.imageryMetadata.sourceTimestamp}.
+            {props.config.imageryMetadata.acquisitionNotice &&
+              ` ${props.config.imageryMetadata.acquisitionNotice}`}
+          </p>
+          <p>
+            Coverage: {props.config.imageryMetadata.bbox.join(", ")}. Native
+            resolution: {props.config.imageryMetadata.nativeResolutionMeters} m.
+            Delivery resolution:{" "}
+            {props.config.imageryMetadata.deliveryResolutionMeters} m.
+            Verification: UNKNOWN. Accuracy: UNKNOWN.{" "}
+            {props.config.imageryMetadata.limitations.join(" ")}
+          </p>
+        </details>
+      )}
+      {props.config.roadsMetadata && (
+        <details className="terrain-attribution">
+          <summary>Nguồn đường · {props.config.roadsRelease}</summary>
+          <p>
+            {props.config.roadsMetadata.attribution} ·{" "}
+            <a
+              href={props.config.roadsMetadata.licenseReference}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {props.config.roadsMetadata.licenseName}
+            </a>
+          </p>
+          <p>
+            Source: {props.config.roadsMetadata.sourceName}. Timestamp:{" "}
+            {props.config.roadsMetadata.sourceTimestamp}. Coverage:{" "}
+            {props.config.roadsMetadata.bbox.join(", ")}. Verification: UNKNOWN.{" "}
+            {props.config.roadsMetadata.limitations.join(" ")}
           </p>
         </details>
       )}

@@ -1,10 +1,11 @@
 import type { ViewerConfig } from "../../spatial-types/src/viewer";
-/** Operational coverage box, not an administrative boundary or verified place. */
+/** Owner-approved operational product coverage, not an administrative boundary. */
 export const LAND_VIEWER_BASE: ViewerConfig = {
   aoi: {
-    name: "Tà Xùa — vùng thử nghiệm Phase 0",
-    version: "TX-AOI-DEMO-001",
-    source: "LAND operational coverage configuration; not an official boundary",
+    name: "Tà Xùa — Phase 1 operational product coverage",
+    version: "TX-AOI-2026-001",
+    source:
+      "Owner-approved Phase 1 operational product coverage; not a legal or administrative boundary",
     west: 104.45,
     south: 21.2,
     east: 104.62,
@@ -15,6 +16,11 @@ export const LAND_VIEWER_BASE: ViewerConfig = {
   terrainChecksum: null,
   roadsUrl: null,
   roadsRelease: null,
+  roadsMetadata: null,
+  imageryManifestUrl: null,
+  imageryRelease: null,
+  imageryChecksum: null,
+  imageryMetadata: null,
   imagery: "NEUTRAL_GRID",
   minimumCameraHeight: 100,
   maximumCameraHeight: 60000,

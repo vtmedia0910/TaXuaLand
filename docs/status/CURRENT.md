@@ -1,7 +1,7 @@
 # TÀ XÙA LAND — CURRENT STATUS
 
 Status: Mutable operational snapshot
-Last reconciled: 2026-09-12
+Last reconciled: 2026-09-13
 Repository: `vtmedia0910/TaXuaLand`
 Local workspace: `C:\Projects\TaXuaLand`
 
@@ -81,9 +81,10 @@ MOBILE BROWSER: PASS
 VISUAL REVIEW: PASS
 VERIFICATION: UNKNOWN
 ACCURACY: UNKNOWN
-NEXT AUTHORIZED SLICE: 1C — GOVERNED IMAGERY + ROADS / NOT STARTED
-IMAGERY: UNAVAILABLE / NEUTRAL_GRID
-ROADS: UNCHANGED / NOT YET APPROVED OR DATA-READY
+SLICE 1C: LOCALLY VALIDATED / READY FOR REVIEW / GIT DELIVERY BLOCKED
+IMAGERY: APPROVED LOCAL CANDIDATE / DISPOSABLE-QA REGISTRATION PASS / NOT DELIVERED / NOT PUBLISHED
+ROADS: APPROVED LOCAL CANDIDATE / DISPOSABLE-QA REGISTRATION PASS / NOT DELIVERED / NOT PUBLISHED
+PRODUCTION VIEWER: UNCHANGED / NEUTRAL_GRID REMAINS ACTIVE
 ```
 
 The owner approved the Phase 1 specification and its four scope/data-readiness decisions on 2026-09-11. PR #4 merged the documentation-only specification; PR #5 subsequently merged the completed Slice 1A public 3D shell.
@@ -314,11 +315,15 @@ Public 3D shell + regional camera + degraded-state baseline
 Slice 1B — COMPLETE
 TX-DEM-2026-001 PUBLISHED; production terrain browser and visual validation PASS
 
-Slice 1C — NOT STARTED
-Next authorized slice: governed imagery + roads; neither is yet approved or data-ready
+Slice 1C — LOCALLY VALIDATED / BLOCKED BEFORE PR REVIEW
+Governed roads and imagery code, local candidates, public contract, Cesium adapter and neutral fallback
 ```
 
-The approved specification is merged through PR #4 and Slice 1A through PR #5. Slice 1B is complete. Imagery remains `UNAVAILABLE / NEUTRAL_GRID`, roads remain unchanged, and Slice 1C has not started. Its identification as the next authorized slice does not assert imagery or road approval/data readiness and does not authorize Property, AI, full viewshed intelligence, or travel-commerce routing.
+The owner approved road candidate `TX-ROADS-2026-001`, OpenStreetMap/ODbL attribution, and Sentinel Item `S2C_T48QVJ_20260527T033930_L2A` with full AOI containment, scene cloud `<= 20%`, AOI SCL obstruction `<= 10%`, and the approved modified-Copernicus public notice. Local candidate inspection passes with 208 road features and 123 imagery tiles; imagery scene cloud is `8.200835%` and AOI obstruction is `5.867461600149733%`. The missing private copied provenance files and EPSG:3857 derived raster were regenerated from the pinned local source bytes; the registrar accepts the complete local inventory before database access.
+
+On 2026-09-13, the configured disposable PostgreSQL 17.11 / PostGIS 3.6.2 environment was started at `127.0.0.1:55439` and used only through a process-scoped `DATABASE_TEST_URL`. Database-backed roads, imagery, registry, delivery and runtime checks passed. Candidate QA registered both approved Releases into an isolated temporary database, verified replay reuse, found zero invalid road records, two approved Releases, zero published Releases and zero delivery receipts, then removed the disposable database and runtime role. `pnpm check` passed with all 173 tests, production build, client/server artifact checks and secret scan. `pnpm test:e2e:core` passed all 12 browser tests, including governed imagery success and failure-to-neutral fallback.
+
+The owner-approved active AOI is pinned as UUID `1a169926-5c2c-48a7-a880-8e62b2b1d33d`, version `TX-AOI-2026-001`, SRID 4326, bbox `[104.45,21.20,104.62,21.35]`, outside policy `WARNING`, and canonical GeoJSON SHA-256 `11a166c87a6526b08cf7a1a480f3e5a0d394aec1be3f7336a7df437741417f14`. No governed Slice 1C runtime, registrar, pipeline, or bootstrap path retains the demo AOI fallback. Existing Sentinel bytes revalidated without download; exact Item containment passes and AOI SCL obstruction remains `5.867461600149733%` with zero nodata/saturated pixels. Roads revalidated at 208 SRID-4326 LineStrings with zero invalid/out-of-coverage rows. The repinned actual candidates passed disposable PostGIS registration and exact replay with 123 imagery tiles, two APPROVED/unpublished Releases and zero delivery receipts. The affected 48-test database-backed suite passed, the corrected imagery contract rerun passed 4/4, all repository/web TypeScript checks passed, and the standalone secret scan, syntax check and `git diff --check` passed. The full lint launcher could not be repeated because this sandbox cannot resolve the existing `next/babel` workspace link; the earlier complete `pnpm check` remains the latest full lint/build gate. `.git` is read-only, so no branch, commit, push, or PR exists. Verification and accuracy remain `UNKNOWN`. No production DB, R2, publication, provider, Vercel, or terrain state was mutated. Published terrain semantics and production terrain delivery remain unchanged. Production imagery remains `NEUTRAL_GRID` until an eligible governed imagery Release is separately registered, delivered, published, deployed and browser-verified.
 
 ---
 
@@ -461,7 +466,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-Ready for Slice 1C owner review: governed imagery + roads. Slice 1C is not started; imagery remains `UNAVAILABLE / NEUTRAL_GRID`, roads remain unchanged, and neither is asserted approved or data-ready.
+From a writable Git environment, create `feat/phase-1c-governed-imagery-roads`, stage only the exact Slice 1C and AOI documentation paths, commit, push, and open the PR to `main` so required GitHub checks can run. Do not register, deliver, publish, deploy to production, or begin Slice 1D+ without the next explicit owner action.
 
 ---
 
@@ -527,13 +532,13 @@ PHASE 0.5 PR
 #2 — MERGED
 
 CURRENT PHASE
-Phase 1 in progress — Slice 1A complete / merged; Slice 1B complete
+Phase 1 in progress — Slice 1A complete / merged; Slice 1B complete; Slice 1C locally validated / ready for review / Git delivery blocked
 
 PRIMARY CURRENT GOAL
-Prepare Slice 1C owner review without starting implementation
+Deliver the validated Slice 1C changes through a PR from a writable Git environment
 
 PHASE 1
-IN PROGRESS / SLICE 1A COMPLETE / SLICE 1B COMPLETE / TX-DEM-2026-001 PUBLISHED / PRODUCTION TERRAIN BROWSER VALIDATION PASS / VERIFICATION UNKNOWN / ACCURACY UNKNOWN
+IN PROGRESS / SLICE 1A COMPLETE / SLICE 1B COMPLETE / SLICE 1C READY FOR REVIEW / GIT DELIVERY BLOCKED / PRODUCTION TERRAIN UNCHANGED / PRODUCTION IMAGERY NEUTRAL_GRID / VERIFICATION UNKNOWN / ACCURACY UNKNOWN
 
 ARCHITECTURE
 FROZEN
@@ -545,5 +550,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-READY FOR SLICE 1C OWNER REVIEW — GOVERNED IMAGERY + ROADS; NOT STARTED; IMAGERY AND ROADS ARE NOT YET APPROVED OR DATA-READY.
+FROM A WRITABLE GIT ENVIRONMENT, CREATE `feat/phase-1c-governed-imagery-roads`, STAGE ONLY THE EXACT SLICE 1C AND AOI DOCUMENTATION PATHS, COMMIT, PUSH, AND OPEN THE PR TO `main` SO REQUIRED GITHUB CHECKS CAN RUN. NO REGISTRATION, DELIVERY, PUBLICATION, PRODUCTION DEPLOYMENT, OR SLICE 1D+ ACTION IS AUTHORIZED.
 ```

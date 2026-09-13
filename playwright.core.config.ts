@@ -10,6 +10,7 @@ export default defineConfig({
     "public-places.spec.ts",
     "import-review.spec.ts",
     "security.spec.ts",
+    "imagery.spec.ts",
     "viewer.spec.ts",
   ],
   fullyParallel: false,
