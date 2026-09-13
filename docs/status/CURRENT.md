@@ -3,7 +3,7 @@
 Status: Mutable operational snapshot
 Last reconciled: 2026-09-13
 Repository: `vtmedia0910/TaXuaLand`
-Local workspace: `C:\Projects\TaXuaLand\work\slice-1c-pr-delivery`
+Local workspace: `C:\Projects\TaXuaLand`
 
 > This file answers: **where is the project now, what is blocked, and what should happen next?**
 >
@@ -38,7 +38,7 @@ Slice 1C is locally validated on branch `feat/phase-1c-governed-imagery-roads`. 
 The local workspace at:
 
 ```text
-C:\Projects\TaXuaLand\work\slice-1c-pr-delivery
+C:\Projects\TaXuaLand
 ```
 
 was inspected before this migration. The tracked baseline matched `origin/main`; the unrelated untracked `Thư mục mới/` directory is owner data and must remain untouched.
