@@ -49,6 +49,24 @@ it("resolves only configured origins, matching delivery and release-scoped keys"
     ),
   ).toBeNull();
   expect(resolvePublishedAsset(release, null)).toBeNull();
+  const imagery = {
+    ...release,
+    kind: "IMAGERY",
+    version: "TX-IMAGERY-1",
+    object_key: `spatial/imagery/${release.dataset_id}/${release.release_id}/manifest.json`,
+  };
+  expect(resolvePublishedAsset(imagery, base)).toBe(
+    `${base}/spatial/imagery/${release.dataset_id}/${release.release_id}/manifest.json`,
+  );
+  expect(
+    resolvePublishedAsset(
+      {
+        ...imagery,
+        object_key: `spatial/imagery/${release.dataset_id}/${release.release_id}/../manifest.json`,
+      },
+      base,
+    ),
+  ).toBeNull();
   for (const key of [
     "../manifest.json",
     "spatial/terrain/TX-TEST-1/../manifest.json",
@@ -124,7 +142,7 @@ describe.skipIf(!process.env.DATABASE_TEST_URL)(
     async function fixture(kind = "ROADS") {
       const source = (
         await pool.query(
-          "INSERT INTO sources(name,category,status,public_display,redistribution,derivatives,caching,license_reference) VALUES('Synthetic delivery',$1,'ACTIVE','ALLOWED','ALLOWED','ALLOWED','ALLOWED','https://example.invalid/license') RETURNING id",
+          "INSERT INTO sources(name,category,license_name,status,public_display,redistribution,derivatives,caching,license_reference) VALUES('Synthetic delivery',$1,'Synthetic licence','ACTIVE','ALLOWED','ALLOWED','ALLOWED','ALLOWED','https://example.invalid/license') RETURNING id",
           [kind],
         )
       ).rows[0].id;
@@ -181,8 +199,29 @@ describe.skipIf(!process.env.DATABASE_TEST_URL)(
         [id, dataset, version, "a".repeat(64), sha256(bytes)],
       );
       await pool.query(
-        "INSERT INTO pipeline_runs(dataset_id,release_id,processing_version,status,manifest) VALUES($1,$2,'test','COMPLETED','{}')",
-        [dataset, id],
+        "INSERT INTO pipeline_runs(dataset_id,release_id,processing_version,status,manifest) VALUES($1,$2,'test','COMPLETED',$3)",
+        [
+          dataset,
+          id,
+          kind === "ROADS"
+            ? {
+                publicMetadata: {
+                  sourceName: "Synthetic delivery",
+                  licenseName: "Synthetic licence",
+                  licenseReference: "https://example.invalid/license",
+                  attribution: "Synthetic road attribution",
+                  acquisitionNotice: null,
+                  sourceTimestamp: "2026-09-07T22:22:01Z",
+                  bbox: [104, 21, 105, 22],
+                  nativeResolutionMeters: null,
+                  deliveryResolutionMeters: null,
+                  verificationStatus: "UNKNOWN",
+                  accuracy: "UNKNOWN",
+                  limitations: ["No safety or access claim."],
+                },
+              }
+            : {},
+        ],
       );
       const files =
         kind === "TERRAIN"
@@ -202,6 +241,174 @@ describe.skipIf(!process.env.DATABASE_TEST_URL)(
         );
       }
       return { id, source, dataset, directory, bytes, version };
+    }
+    async function imageryFixture(tileMime = "image/png") {
+      const source = (
+        await pool.query(
+          "INSERT INTO sources(name,category,license_name,status,public_display,redistribution,derivatives,caching,license_reference,source_crs) VALUES('Synthetic governed imagery','IMAGERY','Synthetic licence','ACTIVE','ALLOWED','ALLOWED','ALLOWED','ALLOWED','https://example.invalid/license','EPSG:32648') RETURNING id",
+        )
+      ).rows[0].id;
+      const dataset = (
+        await pool.query(
+          "INSERT INTO datasets(code,name,kind,source_id) VALUES($1,'Synthetic imagery','IMAGERY',$2) RETURNING id",
+          [randomUUID(), source],
+        )
+      ).rows[0].id;
+      const id = randomUUID(),
+        version = "TX-IMAGERY-S2L2A-20260527T034216Z-001",
+        directory = resolve(root, id),
+        tile = Buffer.concat([
+          Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+          Buffer.alloc(24),
+        ]),
+        sourceVersion = "a".repeat(64);
+      await mkdir(resolve(directory, "0/0"), { recursive: true });
+      const manifest = {
+        format: "LAND_IMAGERY_V1",
+        datasetCode: "TX_IMAGERY_BASE",
+        releaseVersion: version,
+        source: {
+          name: "Synthetic governed imagery",
+          collection: "sentinel-2-c1-l2a",
+          itemId: "S2C_T48QVJ_20260527T033930_L2A",
+          productId:
+            "S2C_MSIL2A_20260527T032511_N0512_R018_T48QVJ_20260527T082311.SAFE",
+          sourceLockSha256: sourceVersion,
+          assets: {
+            item: {
+              sha256: "b".repeat(64),
+              bytes: 10,
+              mediaType: "application/geo+json",
+            },
+            visual: {
+              sha256: "c".repeat(64),
+              bytes: 10,
+              mediaType:
+                "image/tiff; application=geotiff; profile=cloud-optimized",
+            },
+            scl: {
+              sha256: "d".repeat(64),
+              bytes: 10,
+              mediaType:
+                "image/tiff; application=geotiff; profile=cloud-optimized",
+            },
+          },
+          sensingAt: "2026-05-27T03:42:16.849Z",
+          generatedAt: "2026-05-27T08:23:11Z",
+          acquiredAt: "2026-09-12T00:00:00Z",
+        },
+        processing: {
+          version: "test",
+          processedAt: "2026-09-12T00:00:00Z",
+          tools: {
+            rasterio: "test",
+            gdal: "test",
+            proj: "test",
+            libpng: "test",
+          },
+        },
+        sourceCrs: "EPSG:32648",
+        targetCrs: "EPSG:3857",
+        aoi: {
+          id: randomUUID(),
+          version: "SYNTHETIC-AOI",
+          srid: 4326,
+          bbox: [104, 21, 105, 22],
+          outsidePolicy: "WARNING",
+          canonicalGeoJson:
+            '{"type":"Polygon","coordinates":[[[104,21],[104,22],[105,22],[105,21],[104,21]]]}',
+          sha256: "f".repeat(64),
+          authoritySemantics: "Synthetic integration-test coverage.",
+        },
+        bbox: [104, 21, 105, 22],
+        nativeResolutionMeters: { visual: 10, sclQa: 20 },
+        delivery: {
+          scheme: "WEB_MERCATOR_XYZ",
+          tileSize: 256,
+          minimumLevel: 0,
+          maximumLevel: 0,
+          resolutionAtMaximumLevelMeters: 156543.03392804097,
+          tileUrlTemplate: "{z}/{x}/{y}.png",
+        },
+        quality: {
+          sceneCloudPercent: 8.2,
+          obstructionThresholdPercent: 10,
+          aoiObstructionPercent: 5.86,
+          obstructionClasses: [3, 8, 9, 10, 11],
+          validPixelCount: 100,
+          obstructedPixelCount: 6,
+          nodataPixelCount: 0,
+          saturatedPixelCount: 0,
+          aoiContained: true,
+        },
+        rights: {
+          licenseName: "Synthetic licence",
+          licenseReference: "https://example.invalid/license",
+          publicNotice: "Contains modified Copernicus Sentinel data 2026",
+          acquisitionNotice: "Synthetic AWS acquisition notice.",
+        },
+        verificationStatus: "UNKNOWN",
+        accuracy: "UNKNOWN",
+        limitations: [
+          "Resolution is not positional accuracy.",
+          "Cloud screening is not field verification.",
+        ],
+        tileCount: 1,
+        tiles: {
+          "0/0/0.png": {
+            bytes: tile.length,
+            sha256: sha256(tile),
+            mediaType: "image/png",
+          },
+        },
+      };
+      const bytes = Buffer.from(JSON.stringify(manifest));
+      await writeFile(resolve(directory, "manifest.json"), bytes);
+      await writeFile(resolve(directory, "0/0/0.png"), tile);
+      await pool.query(
+        "INSERT INTO dataset_releases(id,dataset_id,version,source_version,pipeline_version,source_crs,target_crs,vertical_datum,resolution,bbox,license,checksum,qa_status) VALUES($1,$2,$3,$4,'test','EPSG:32648','EPSG:3857','UNKNOWN',10,ST_MakeEnvelope(104,21,105,22,4326),'Synthetic',$5,'APPROVED')",
+        [id, dataset, version, sourceVersion, sha256(bytes)],
+      );
+      await pool.query(
+        "INSERT INTO pipeline_runs(dataset_id,release_id,processing_version,status,finished_at,manifest) VALUES($1,$2,'test','COMPLETED',now(),$3)",
+        [
+          dataset,
+          id,
+          {
+            registration: "APPROVED_OPERATOR",
+            sourceLockSha256: sourceVersion,
+            manifestSha256: sha256(bytes),
+            quality: manifest.quality,
+            verificationStatus: "UNKNOWN",
+            accuracy: "UNKNOWN",
+            publicMetadata: {
+              sourceName: "Synthetic governed imagery",
+              licenseName: "Synthetic licence",
+              licenseReference: "https://example.invalid/license",
+              attribution: "Contains modified Copernicus Sentinel data 2026",
+              acquisitionNotice: "Synthetic AWS acquisition notice.",
+              sourceTimestamp: "2026-05-27T03:42:16.849Z",
+              bbox: [104, 21, 105, 22],
+              nativeResolutionMeters: 10,
+              deliveryResolutionMeters: 156543.03392804097,
+              verificationStatus: "UNKNOWN",
+              accuracy: "UNKNOWN",
+              limitations: ["Resolution is not positional accuracy."],
+            },
+          },
+        ],
+      );
+      for (const [file, data, mime] of [
+        ["manifest.json", bytes, "application/vnd.land.imagery+json"],
+        ["0/0/0.png", tile, tileMime],
+      ] as const) {
+        const key = `spatial/imagery/${dataset}/${id}/${file}`;
+        await pool.query(
+          "INSERT INTO dataset_assets(release_id,zone,object_key,checksum,byte_size,content_type,public_url) VALUES($1,'published',$2,$3,$4,$5,$6)",
+          [id, key, sha256(data), data.length, mime, `/${key}`],
+        );
+      }
+      return { id, source, dataset, directory, bytes, version, tile };
     }
     it("rejects publication without configure permission or a valid release UUID", async () => {
       await expect(
@@ -326,7 +533,7 @@ describe.skipIf(!process.env.DATABASE_TEST_URL)(
         publishRelease(actor, f.id, pool, env),
       ).rejects.toMatchObject({ code: "RELEASE_GATE" });
     });
-    it("rejects unsupported release kinds", async () => {
+    it("rejects imagery that does not meet the governed CRS/manifest contract", async () => {
       const f = await fixture("IMAGERY");
       await expect(
         publishRelease(actor, f.id, pool, {
@@ -336,6 +543,130 @@ describe.skipIf(!process.env.DATABASE_TEST_URL)(
           VERCEL: undefined,
         }),
       ).rejects.toMatchObject({ code: "RELEASE_GATE" });
+    });
+    it("gates, delivers, projects and suppresses one governed imagery release", async () => {
+      await pool.query(
+        "INSERT INTO areas_of_interest(name,version,source,boundary,outside_policy,active) VALUES('Synthetic AOI',$1,'Synthetic',ST_MakeEnvelope(104,21,105,22,4326),'WARNING',true)",
+        [randomUUID()],
+      );
+      const f = await imageryFixture();
+      await expect(
+        publishRelease(actor, f.id, pool, env),
+      ).rejects.toMatchObject({
+        code: "RELEASE_DELIVERY_REQUIRED",
+      });
+      const delivered = await publishObjectRelease(
+        pool,
+        f.id,
+        f.directory,
+        store,
+        base,
+      );
+      expect((await publicLayers(pool, env)).imageryManifestUrl).toBeNull();
+      await pool.query(
+        "UPDATE pipeline_runs SET manifest=jsonb_set(manifest,'{quality,aoiContained}','false'::jsonb) WHERE release_id=$1",
+        [f.id],
+      );
+      await expect(publishRelease(actor, f.id, pool, env)).rejects.toMatchObject(
+        { code: "RELEASE_GATE" },
+      );
+      await pool.query(
+        "UPDATE pipeline_runs SET manifest=jsonb_set(manifest,'{quality,aoiContained}','true'::jsonb) WHERE release_id=$1",
+        [f.id],
+      );
+      const prePublishDuplicate = (
+        await pool.query(
+          "INSERT INTO pipeline_runs(dataset_id,release_id,processing_version,status,finished_at,manifest) SELECT dataset_id,release_id,processing_version,status,now(),manifest FROM pipeline_runs WHERE release_id=$1 RETURNING id",
+          [f.id],
+        )
+      ).rows[0].id;
+      await expect(publishRelease(actor, f.id, pool, env)).rejects.toMatchObject(
+        { code: "RELEASE_GATE" },
+      );
+      await pool.query("DELETE FROM pipeline_runs WHERE id=$1", [
+        prePublishDuplicate,
+      ]);
+      await publishRelease(actor, f.id, pool, env);
+      const projected = await publicLayers(pool, env);
+      expect(projected.imageryManifestUrl).toBe(delivered.url);
+      expect(projected.imageryRelease).toBe(f.version);
+      expect(projected.imageryMetadata).toMatchObject({
+        verificationStatus: "UNKNOWN",
+        accuracy: "UNKNOWN",
+      });
+      const duplicateRun = (
+        await pool.query(
+          "INSERT INTO pipeline_runs(dataset_id,release_id,processing_version,status,finished_at,manifest) SELECT dataset_id,release_id,processing_version,status,now(),jsonb_set(manifest,'{publicMetadata,attribution}',to_jsonb('changed'::text)) FROM pipeline_runs WHERE release_id=$1 RETURNING id",
+          [f.id],
+        )
+      ).rows[0].id;
+      expect((await publicLayers(pool, env)).imageryManifestUrl).toBeNull();
+      await pool.query("DELETE FROM pipeline_runs WHERE id=$1", [duplicateRun]);
+      expect((await publicLayers(pool, env)).imageryManifestUrl).toBe(
+        delivered.url,
+      );
+
+      await pool.query(
+        "INSERT INTO integration_providers(id,type,enabled,kill_switch) VALUES('imagery_test','IMAGERY',true,true)",
+      );
+      await pool.query(
+        "UPDATE sources SET provider_id='imagery_test' WHERE id=$1",
+        [f.source],
+      );
+      expect((await publicLayers(pool, env)).imageryManifestUrl).toBeNull();
+      await pool.query(
+        "UPDATE integration_providers SET kill_switch=false WHERE id='imagery_test'",
+      );
+      expect((await publicLayers(pool, env)).imageryManifestUrl).toBe(
+        delivered.url,
+      );
+      await pool.query(
+        "UPDATE sources SET public_display='DENIED' WHERE id=$1",
+        [f.source],
+      );
+      expect((await publicLayers(pool, env)).imageryManifestUrl).toBeNull();
+      await pool.query(
+        "UPDATE sources SET public_display='ALLOWED' WHERE id=$1",
+        [f.source],
+      );
+      await pool.query(
+        "UPDATE dataset_releases SET qa_status='RETIRED' WHERE id=$1",
+        [f.id],
+      );
+      expect((await publicLayers(pool, env)).imageryManifestUrl).toBeNull();
+    });
+    it("rejects wrong imagery MIME, changed tile bytes and incomplete tile sets", async () => {
+      const wrongMime = await imageryFixture("image/jpeg");
+      await expect(
+        publishObjectRelease(
+          pool,
+          wrongMime.id,
+          wrongMime.directory,
+          store,
+          base,
+        ),
+      ).rejects.toThrow();
+
+      const changed = await imageryFixture();
+      await writeFile(
+        resolve(changed.directory, "0/0/0.png"),
+        Buffer.alloc(changed.tile.length),
+      );
+      await expect(
+        publishObjectRelease(pool, changed.id, changed.directory, store, base),
+      ).rejects.toThrow();
+
+      const incomplete = await imageryFixture();
+      await unlink(resolve(incomplete.directory, "0/0/0.png"));
+      await expect(
+        publishObjectRelease(
+          pool,
+          incomplete.id,
+          incomplete.directory,
+          store,
+          base,
+        ),
+      ).rejects.toThrow();
     });
     it("rejects publication when caching rights are revoked after delivery", async () => {
       const f = await fixture();

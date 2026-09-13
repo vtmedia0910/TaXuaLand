@@ -6,6 +6,7 @@ import pg from "pg";
 import { databaseOptions } from "../packages/config/src/database.ts";
 import { z } from "zod";
 import { TerrainManifest } from "../packages/spatial-types/src/terrain.ts";
+import { ImageryManifest } from "../packages/spatial-types/src/imagery.ts";
 import {
   publishedBase,
   spatialAssetFile,
@@ -62,19 +63,21 @@ export async function publishObjectRelease(
         checksum: string;
         source_version: string;
         pipeline_version: string;
+        source_crs: string;
+        target_crs: string;
         vertical_datum: string;
         resolution: number | null;
         ready: boolean;
         provider_id: string | null;
         bbox: number[];
       }>(
-        `SELECT r.id AS release_id,r.dataset_id,d.source_id,d.kind,r.version,r.checksum,r.source_version,r.pipeline_version,r.vertical_datum,r.resolution,s.provider_id,ARRAY[ST_XMin(r.bbox),ST_YMin(r.bbox),ST_XMax(r.bbox),ST_YMax(r.bbox)] AS bbox,
-      (r.qa_status IN ('APPROVED','PUBLISHED') AND r.bbox IS NOT NULL AND r.target_crs='EPSG:4326' AND r.license<>'UNKNOWN' AND s.status='ACTIVE' AND s.archived_at IS NULL AND s.public_display='ALLOWED' AND s.redistribution='ALLOWED' AND s.derivatives='ALLOWED' AND s.caching='ALLOWED' AND s.license_reference IS NOT NULL AND EXISTS(SELECT 1 FROM pipeline_runs p WHERE p.release_id=r.id AND p.status='COMPLETED')) AS ready
+        `SELECT r.id AS release_id,r.dataset_id,d.source_id,d.kind,r.version,r.checksum,r.source_version,r.pipeline_version,r.source_crs,r.target_crs,r.vertical_datum,r.resolution,s.provider_id,ARRAY[ST_XMin(r.bbox),ST_YMin(r.bbox),ST_XMax(r.bbox),ST_YMax(r.bbox)] AS bbox,
+      (r.qa_status IN ('APPROVED','PUBLISHED') AND r.bbox IS NOT NULL AND ((d.kind IN ('TERRAIN','ROADS') AND r.target_crs='EPSG:4326') OR (d.kind='IMAGERY' AND r.source_crs='EPSG:32648' AND r.target_crs='EPSG:3857' AND r.resolution=10)) AND r.license<>'UNKNOWN' AND s.status='ACTIVE' AND s.archived_at IS NULL AND s.public_display='ALLOWED' AND s.redistribution='ALLOWED' AND s.derivatives='ALLOWED' AND s.caching='ALLOWED' AND s.license_reference IS NOT NULL AND EXISTS(SELECT 1 FROM pipeline_runs p WHERE p.release_id=r.id AND p.status='COMPLETED')) AS ready
       FROM dataset_releases r JOIN datasets d ON d.id=r.dataset_id JOIN sources s ON s.id=d.source_id WHERE r.id=$1 FOR UPDATE OF r FOR SHARE OF d,s`,
         [id],
       )
     ).rows[0];
-    if (!release?.ready || !["TERRAIN", "ROADS"].includes(release.kind))
+    if (!release?.ready || !["TERRAIN", "ROADS", "IMAGERY"].includes(release.kind))
       throw Error("Spatial publication gate rejected");
     if (
       release.provider_id &&
@@ -101,7 +104,7 @@ export async function publishObjectRelease(
       });
       const object = descriptor("published", {
         key: publishedObjectKey(
-          release.kind === "TERRAIN" ? "terrain" : "roads",
+          release.kind === "TERRAIN" ? "terrain" : release.kind === "IMAGERY" ? "imagery" : "roads",
           release.dataset_id,
           id,
           file,
@@ -153,7 +156,7 @@ export async function publishObjectRelease(
     const entry = items.find(
       (item) =>
         item.file ===
-        (release.kind === "TERRAIN" ? "manifest.json" : "roads.geojson"),
+        (release.kind === "TERRAIN" || release.kind === "IMAGERY" ? "manifest.json" : "roads.geojson"),
     );
     if (!entry || entry.object.sha256 !== release.checksum)
       throw Error("Spatial entry checksum mismatch");
@@ -188,6 +191,14 @@ export async function publishObjectRelease(
           item.object.contentType !== "application/octet-stream"
         )
           throw Error("Terrain index mismatch");
+      }
+    } else if (release.kind === "IMAGERY") {
+      if (entry.object.size > 1024 * 1024 || entry.object.contentType !== "application/vnd.land.imagery+json") throw Error("Invalid imagery entry");
+      const manifest = ImageryManifest.parse(JSON.parse(entryBytes.toString("utf8")));
+      if (manifest.releaseVersion !== release.version || manifest.source.sourceLockSha256 !== release.source_version || manifest.processing.version !== release.pipeline_version || manifest.sourceCrs !== release.source_crs || manifest.targetCrs !== release.target_crs || manifest.nativeResolutionMeters.visual !== release.resolution || manifest.bbox.some((coordinate, index) => coordinate !== release.bbox[index]) || items.length !== manifest.tileCount + 1) throw Error("Imagery provenance mismatch");
+      for (const item of items.filter((item) => item !== entry)) {
+        const tile = manifest.tiles[item.file];
+        if (!tile || tile.sha256 !== item.object.sha256 || tile.bytes !== item.object.size || tile.mediaType !== item.object.contentType || item.object.contentType !== "image/png") throw Error("Imagery tile index mismatch");
       }
     } else if (
       items.length !== 1 ||

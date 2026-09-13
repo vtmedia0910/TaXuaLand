@@ -1,0 +1,67 @@
+{
+  "schema": "LAND_SENTINEL_SOURCE_LOCK_V1",
+  "sourceName": "Copernicus Sentinel-2 Collection 1 Level-2A Surface Reflectance / AWS Open Data COGs",
+  "collection": "sentinel-2-c1-l2a",
+  "itemId": "S2C_T48QVJ_20260527T033930_L2A",
+  "productId": "S2C_MSIL2A_20260527T032511_N0512_R018_T48QVJ_20260527T082311.SAFE",
+  "sensingAt": "2026-05-27T03:42:16.849000Z",
+  "generatedAt": "2026-05-27T08:23:11.000000Z",
+  "sceneCloudPercent": 8.200835,
+  "sourceCrs": "EPSG:32648",
+  "itemGeometry": [
+    [104.03287625334832, 21.700587492343406],
+    [104.0393135604948, 20.70865654019182],
+    [105.09372175626271, 20.711311021750305],
+    [105.09434987887005, 21.703381404226647],
+    [104.03287625334832, 21.700587492343406]
+  ],
+  "aoi": {
+    "id": "1a169926-5c2c-48a7-a880-8e62b2b1d33d",
+    "version": "TX-AOI-2026-001",
+    "srid": 4326,
+    "bbox": [104.45, 21.2, 104.62, 21.35],
+    "outsidePolicy": "WARNING",
+    "canonicalGeoJson": "{\"type\":\"Polygon\",\"coordinates\":[[[104.45,21.2],[104.45,21.35],[104.62,21.35],[104.62,21.2],[104.45,21.2]]]}",
+    "sha256": "11a166c87a6526b08cf7a1a480f3e5a0d394aec1be3f7336a7df437741417f14",
+    "authoritySemantics": "Owner-approved Phase 1 operational product coverage. NOT a legal or administrative boundary."
+  },
+  "assets": {
+    "item": {
+      "url": "https://earth-search.aws.element84.com/v1/collections/sentinel-2-c1-l2a/items/S2C_T48QVJ_20260527T033930_L2A",
+      "filename": "item.json",
+      "mediaType": "application/geo+json",
+      "bytes": 17682,
+      "sha256": "1da384852518a7fdfb0480a419991c2ed00f43b6a0eef83f651148a5512637b1"
+    },
+    "visual": {
+      "url": "https://e84-earth-search-sentinel-data.s3.us-west-2.amazonaws.com/sentinel-2-c1-l2a/48/Q/VJ/2026/5/S2C_T48QVJ_20260527T033930_L2A/TCI.tif",
+      "filename": "TCI.tif",
+      "mediaType": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "roles": ["visual"],
+      "gsd": 10,
+      "bytes": 320168754,
+      "upstreamMultihash": "1220d4ba26b4be3430e92ebc8c4e03657c228091a5ed1d4cf642897b4329ea2b63f2",
+      "sha256": "d4ba26b4be3430e92ebc8c4e03657c228091a5ed1d4cf642897b4329ea2b63f2",
+      "shape": [10980, 10980],
+      "transform": [10, 0, 399960, 0, -10, 2400000]
+    },
+    "scl": {
+      "url": "https://e84-earth-search-sentinel-data.s3.us-west-2.amazonaws.com/sentinel-2-c1-l2a/48/Q/VJ/2026/5/S2C_T48QVJ_20260527T033930_L2A/SCL.tif",
+      "filename": "SCL.tif",
+      "mediaType": "image/tiff; application=geotiff; profile=cloud-optimized",
+      "roles": ["data"],
+      "gsd": 20,
+      "bytes": 2543183,
+      "upstreamMultihash": "122033422ed1bc5c9314df348bdcfa322513d1faa40e07998085f42e01c470ee07c1",
+      "sha256": "33422ed1bc5c9314df348bdcfa322513d1faa40e07998085f42e01c470ee07c1",
+      "shape": [5490, 5490],
+      "transform": [20, 0, 399960, 0, -20, 2400000]
+    }
+  },
+  "rights": {
+    "licenseName": "Copernicus Sentinel Data Legal Notice (rev. 1)",
+    "licenseReference": "https://cds.climate.copernicus.eu/licences/ec-sentinel",
+    "publicNotice": "Contains modified Copernicus Sentinel data 2026",
+    "acquisitionNotice": "Sentinel-2 Cloud-Optimized GeoTIFFs was accessed on 2026-09-12 from https://registry.opendata.aws/sentinel-2-l2a-cogs."
+  }
+}

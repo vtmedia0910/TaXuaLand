@@ -38,7 +38,7 @@ export function spatialAssetFile(
   asset: Omit<ReleaseAsset, "public_url" | "delivered_base">,
 ) {
   if (
-    !["TERRAIN", "ROADS"].includes(asset.kind) ||
+    !["TERRAIN", "ROADS", "IMAGERY"].includes(asset.kind) ||
     !/^[A-Za-z0-9_-]+$/.test(asset.version)
   )
     throw Error("Invalid LAND spatial release");
@@ -54,12 +54,14 @@ export function spatialAssetFile(
     !(
       asset.kind === "TERRAIN"
         ? /^(manifest\.json|\d+\/\d+\/\d+\.bin)$/
-        : /^roads\.geojson$/
+        : asset.kind === "IMAGERY"
+          ? /^(manifest\.json|\d+\/\d+\/\d+\.png)$/
+          : /^roads\.geojson$/
     ).test(file)
   )
     throw Error("Invalid LAND spatial asset association");
   publishedObjectKey(
-    asset.kind === "TERRAIN" ? "terrain" : "roads",
+    asset.kind === "TERRAIN" ? "terrain" : asset.kind === "IMAGERY" ? "imagery" : "roads",
     asset.dataset_id,
     asset.release_id,
     file,
@@ -73,7 +75,7 @@ export function resolvePublishedAsset(
   if (base) {
     if (asset.delivered_base !== base) return null;
     try {
-      return `${base}/${publishedObjectKey(asset.kind === "TERRAIN" ? "terrain" : "roads", asset.dataset_id, asset.release_id, spatialAssetFile(asset))}`;
+      return `${base}/${publishedObjectKey(asset.kind === "TERRAIN" ? "terrain" : asset.kind === "IMAGERY" ? "imagery" : "roads", asset.dataset_id, asset.release_id, spatialAssetFile(asset))}`;
     } catch {
       return null;
     }

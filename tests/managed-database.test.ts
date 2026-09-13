@@ -110,6 +110,13 @@ describe.skipIf(!connection)(
     });
     it("accepts read-only runtime, rejects owner and publication receipt write authority", async () => {
       await expect(assertRuntimeDatabase(runtime)).resolves.toBeUndefined();
+      expect(
+        (
+          await runtime.query(
+            "SELECT has_table_privilege(current_user,'road_segments','SELECT') AS road_read,has_table_privilege(current_user,'road_segments','INSERT,UPDATE,DELETE') AS road_write,has_table_privilege(current_user,'spatial_object_deliveries','INSERT,UPDATE,DELETE') AS receipt_write",
+          )
+        ).rows[0],
+      ).toEqual({ road_read: true, road_write: false, receipt_write: false });
       await expect(assertRuntimeDatabase(pool)).rejects.toThrow("readiness");
       await pool.query(
         `GRANT INSERT ON spatial_object_deliveries TO "${role}"`,

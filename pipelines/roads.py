@@ -6,6 +6,7 @@ from terrain import write_json
 
 VERSION="TX-ROADS-2026-001"
 AOI=[104.45,21.20,104.62,21.35]
+AOI_EVIDENCE={"id":"1a169926-5c2c-48a7-a880-8e62b2b1d33d","version":"TX-AOI-2026-001","srid":4326,"bbox":AOI,"outsidePolicy":"WARNING","canonicalGeoJson":"{\"type\":\"Polygon\",\"coordinates\":[[[104.45,21.2],[104.45,21.35],[104.62,21.35],[104.62,21.2],[104.45,21.2]]]}","sha256":"11a166c87a6526b08cf7a1a480f3e5a0d394aec1be3f7336a7df437741417f14","authoritySemantics":"Owner-approved Phase 1 operational product coverage. NOT a legal or administrative boundary."}
 
 def build():
     lock=json.loads((ROOT/"pipelines/roads.lock.json").read_text(encoding="utf8"))
@@ -38,7 +39,7 @@ def build():
     write_json(release/"normalized/roads.geojson",collection)
     write_json(release/"derived/roads.geojson",collection)
     write_json(release/"published/roads.geojson",collection)
-    manifest={"version":VERSION,"processingVersion":"land-roads-1.0.0","sourceVersion":lock["sha256"],"sourceTimestamp":lock["sourceTimestamp"],"horizontalCrs":"EPSG:4326","bbox":AOI,"features":len(features),"checksum":sha256(release/"published/roads.geojson"),"license":lock["license"],"attribution":"© OpenStreetMap contributors","verificationStatus":"UNKNOWN","sourceLock":lock}
+    manifest={"version":VERSION,"processingVersion":"land-roads-1.0.0","sourceVersion":lock["sha256"],"sourceTimestamp":lock["sourceTimestamp"],"horizontalCrs":"EPSG:4326","aoi":AOI_EVIDENCE,"bbox":AOI,"features":len(features),"checksum":sha256(release/"published/roads.geojson"),"license":lock["license"],"attribution":"© OpenStreetMap contributors","verificationStatus":"UNKNOWN","sourceLock":lock}
     write_json(release/"manifest.json",manifest)
     print(json.dumps(manifest))
 

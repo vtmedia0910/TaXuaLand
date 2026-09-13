@@ -8,4 +8,4 @@ Publishing requires the `publish` permission, explicit review of the current loc
 
 Admin lists filter by name, category, source, publication, effective verification, missing coordinates and expiry. HTTP filters parse boolean text explicitly (`false` never becomes true). Metric road context uses PostGIS geography, a geography GiST index and a 5 km search radius. Mapped proximity does not establish access or safety.
 
-`node --env-file=.env.local infra/configure-aoi.mjs` configures the documented LAND operational demo rectangle only if no AOI is active. It is not an administrative/cadastral boundary and never replaces an existing active AOI. Production coverage changes require a separately versioned polygon and documented source.
+`node --env-file=.env.local infra/configure-aoi.mjs` configures the owner-approved LAND operational product coverage `TX-AOI-2026-001` only if no AOI is active. It is not an administrative/cadastral boundary and never replaces an existing active AOI. Production coverage changes require a separately versioned polygon and documented source.

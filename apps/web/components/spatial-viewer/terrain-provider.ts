@@ -1,45 +1,6 @@
 import * as Cesium from "cesium";
 import { TerrainManifest } from "../../../../packages/spatial-types/src/terrain";
-
-const digest = async (bytes: ArrayBuffer) =>
-  Array.from(
-    new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
-    (b) => b.toString(16).padStart(2, "0"),
-  ).join("");
-async function boundedBytes(
-  response: Response,
-  maximum: number,
-): Promise<ArrayBuffer> {
-  if (
-    !response.body ||
-    Number(response.headers.get("content-length") ?? 0) > maximum
-  )
-    throw Error("TERRAIN_RESPONSE_SIZE");
-  const reader = response.body.getReader(),
-    chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    for (;;) {
-      const part = await reader.read();
-      if (part.done) break;
-      size += part.value.length;
-      if (size > maximum) {
-        await reader.cancel();
-        throw Error("TERRAIN_RESPONSE_SIZE");
-      }
-      chunks.push(part.value);
-    }
-  } finally {
-    reader.releaseLock();
-  }
-  const bytes = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return bytes.buffer;
-}
+import { boundedBytes, sha256 } from "./asset-integrity";
 /** Bounded, finite-resolution DEM provider. No terrain is invented outside coverage. */
 export async function loadLandTerrain(
   url: string,
@@ -49,7 +10,7 @@ export async function loadLandTerrain(
   const response = await fetch(url, { signal });
   if (!response.ok) throw Error("TERRAIN_MANIFEST_HTTP");
   const bytes = await boundedBytes(response, 1024 * 1024);
-  if (bytes.byteLength > 1024 * 1024 || (await digest(bytes)) !== expectedHash)
+  if (bytes.byteLength > 1024 * 1024 || (await sha256(bytes)) !== expectedHash)
     throw Error("TERRAIN_MANIFEST_INTEGRITY");
   const manifest = TerrainManifest.parse(
     JSON.parse(new TextDecoder().decode(bytes)),
@@ -113,7 +74,7 @@ export async function loadLandTerrain(
         const tile = await boundedBytes(result, entry.bytes);
         if (
           tile.byteLength !== entry.bytes ||
-          (await digest(tile)) !== entry.sha256
+          (await sha256(tile)) !== entry.sha256
         )
           throw Error("TERRAIN_TILE_INTEGRITY");
         const view = new DataView(tile),

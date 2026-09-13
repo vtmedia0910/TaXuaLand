@@ -60,12 +60,8 @@ test("Cesium shell, layer controls, camera reset and mobile viewport", async ({
   const layerControl = page.getByRole("button", { name: "Mở lớp bản đồ" });
   await layerControl.click();
   const referenceGrid = page.getByLabel("Lưới tham chiếu", { exact: true });
-  await referenceGrid.focus();
-  await expect(referenceGrid).toBeFocused();
-  await page.keyboard.press("Space");
-  await expect(referenceGrid).not.toBeChecked();
-  await page.keyboard.press("Space");
   await expect(referenceGrid).toBeChecked();
+  await expect(referenceGrid).toBeDisabled();
   await layerControl.click();
   await page
     .locator(".cesium-host canvas")
