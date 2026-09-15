@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import type {
@@ -10,6 +10,21 @@ import type {
 import type { SpatialViewerProps } from "./types";
 import { loadLandTerrain } from "./terrain-provider";
 import { loadLandImagery } from "./imagery-provider";
+import {
+  clampMarkerBbox,
+  configurePlaceClustering,
+  createLatestMarkerRequest,
+  createPlaceDataSource,
+  isClusterPick,
+  isMeaningfulMarkerViewport,
+  loadPublicPlaceMarkers,
+  PLACE_CLUSTER_MINIMUM_SIZE,
+  PLACE_CLUSTER_PIXEL_RANGE,
+  PLACE_MARKER_VIEWPORT_LIMIT,
+  resolvePickedPlaceId,
+  syncPlaceEntities,
+  type MarkerBbox,
+} from "./place-markers";
 import {
   cameraFlightDuration,
   initialLayerReadiness,
@@ -53,6 +68,23 @@ function cameraFrameValue(camera: Cesium.Camera) {
   ].join(",");
 }
 
+function currentMarkerViewport(currentViewer: Cesium.Viewer, aoi: MarkerBbox) {
+  const rectangle = currentViewer.camera.computeViewRectangle(
+    currentViewer.scene.globe.ellipsoid,
+  );
+  return clampMarkerBbox(
+    rectangle
+      ? {
+          west: Cesium.Math.toDegrees(rectangle.west),
+          south: Cesium.Math.toDegrees(rectangle.south),
+          east: Cesium.Math.toDegrees(rectangle.east),
+          north: Cesium.Math.toDegrees(rectangle.north),
+        }
+      : aoi,
+    aoi,
+  );
+}
+
 export default function ViewerEngine(props: SpatialViewerProps) {
   const host = useRef<HTMLDivElement>(null),
     viewer = useRef<Cesium.Viewer | null>(null),
@@ -63,6 +95,8 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     terrain = useRef<Cesium.TerrainProvider | null>(null),
     cameraTransition = useRef(0),
     cameraMoving = useRef(false),
+    markerReload = useRef<(() => void) | null>(null),
+    placeRenderSignatures = useRef(new Map<string, string>()),
     callbacks = useRef(props);
   const telemetry = useRef<ViewerDiagnostics | null>(null);
   const reducedMotion = useRef(false);
@@ -85,6 +119,16 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       initialLayerReadiness(props.config),
     ),
     [terrainDetails, setTerrainDetails] = useState(""),
+    [viewportPoints, setViewportPoints] = useState<
+      NonNullable<SpatialViewerProps["points"]>
+    >([]),
+    [markerState, setMarkerState] = useState({
+      count: 0,
+      requestCount: 0,
+      truncated: false,
+      status: "IDLE" as "IDLE" | "LOADING" | "READY" | "FAILED",
+    }),
+    [markerEntityCount, setMarkerEntityCount] = useState(0),
     [renderedWidth, setRenderedWidth] = useState(0),
     [renderState, setRenderState] = useState("INITIALIZING"),
     [visible, setVisible] = useState<Record<LayerId, boolean>>({
@@ -94,6 +138,18 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       places: true,
     });
   const visibility = useRef(visible);
+  const displayPoints = useMemo(() => {
+    if (!props.loadPublicMarkers) return props.points ?? [];
+    const selected = props.points?.find(
+      (point) => point.id === props.selectedId,
+    );
+    if (!selected || viewportPoints.some((point) => point.id === selected.id))
+      return viewportPoints;
+    return [
+      selected,
+      ...viewportPoints.slice(0, PLACE_MARKER_VIEWPORT_LIMIT - 1),
+    ];
+  }, [props.loadPublicMarkers, props.points, props.selectedId, viewportPoints]);
   useEffect(() => {
     visibility.current = visible;
   }, [visible]);
@@ -113,9 +169,13 @@ export default function ViewerEngine(props: SpatialViewerProps) {
     let disposed = false,
       instance: Cesium.Viewer | null = null,
       handler: Cesium.ScreenSpaceEventHandler | null = null;
+    const renderSignatures = placeRenderSignatures.current;
     const cleanup: Array<() => void> = [];
     const controller = new AbortController();
+    const markerRequests = createLatestMarkerRequest();
+    let lastMarkerViewport: MarkerBbox | null = null;
     cleanup.push(() => controller.abort());
+    cleanup.push(() => markerRequests.abort());
     const start = performance.now();
     const startingLayers = initialLayerReadiness(props.config);
     const diagnostics: ViewerDiagnostics = {
@@ -213,14 +273,76 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       });
       setCameraFrame(cameraFrameValue(v.camera));
       setCameraComplete(true);
-      const points = new Cesium.CustomDataSource("LAND places");
-      points.clustering.enabled = true;
-      points.clustering.pixelRange = 50;
-      points.clustering.minimumClusterSize = 15;
+      const points = createPlaceDataSource();
+      configurePlaceClustering(points);
       placeLayer.current = points;
       await v.dataSources.add(points);
       if (disposed) return;
-      setLayer("places", callbacks.current.placesReadiness ?? "READY");
+      setLayer(
+        "places",
+        callbacks.current.loadPublicMarkers
+          ? "INITIALIZING"
+          : (callbacks.current.placesReadiness ?? "READY"),
+      );
+      const loadMarkers = async (force = false) => {
+        if (!callbacks.current.loadPublicMarkers) return;
+        const bbox = currentMarkerViewport(v, callbacks.current.config.aoi);
+        if (!bbox) {
+          markerRequests.abort();
+          lastMarkerViewport = null;
+          setViewportPoints([]);
+          setMarkerState({
+            count: 0,
+            requestCount: 0,
+            truncated: false,
+            status: "READY",
+          });
+          setLayer("places", "READY");
+          return;
+        }
+        if (!force && !isMeaningfulMarkerViewport(lastMarkerViewport, bbox))
+          return;
+        lastMarkerViewport = bbox;
+        const request = markerRequests.next();
+        setMarkerState((state) => ({ ...state, status: "LOADING" }));
+        setLayer("places", "INITIALIZING");
+        try {
+          const result = await loadPublicPlaceMarkers(bbox, request.signal);
+          if (disposed || !markerRequests.isCurrent(request.generation)) return;
+          setViewportPoints(result.points);
+          setMarkerState({
+            count: result.markerCount,
+            requestCount: result.requestCount,
+            truncated: result.truncated,
+            status: "READY",
+          });
+          setLayer("places", "READY");
+          v.scene.requestRender();
+        } catch {
+          if (
+            disposed ||
+            request.signal.aborted ||
+            !markerRequests.isCurrent(request.generation)
+          )
+            return;
+          setViewportPoints([]);
+          setMarkerState({
+            count: 0,
+            requestCount: 0,
+            truncated: false,
+            status: "FAILED",
+          });
+          diagnostics.failedRequests++;
+          setLayer("places", "FAILED");
+          emit();
+          v.scene.requestRender();
+        }
+      };
+      const reloadMarkers = () => void loadMarkers(true);
+      markerReload.current = reloadMarkers;
+      cleanup.push(() => {
+        if (markerReload.current === reloadMarkers) markerReload.current = null;
+      });
       handler = new Cesium.ScreenSpaceEventHandler(v.scene.canvas);
       const positionAt = (screen: Cesium.Cartesian2) => {
         const ray = v.camera.getPickRay(screen);
@@ -235,9 +357,13 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       };
       handler.setInputAction((event: { position: Cesium.Cartesian2 }) => {
         const selected = v.scene.pick(event.position);
-        if (Cesium.defined(selected) && selected.id instanceof Cesium.Entity) {
-          callbacks.current.onSelect?.(selected.id.id);
-        } else if (callbacks.current.picker) {
+        const placeId = resolvePickedPlaceId(
+          selected,
+          points,
+          !callbacks.current.loadPublicMarkers,
+        );
+        if (placeId) callbacks.current.onSelect?.(placeId);
+        else if (!isClusterPick(selected) && callbacks.current.picker) {
           const candidate = positionAt(event.position);
           if (candidate) callbacks.current.onCandidate?.(candidate);
         }
@@ -322,9 +448,11 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         v.camera.moveEnd.addEventListener(() => {
           cameraMoving.current = false;
           setCameraComplete(true);
+          void loadMarkers();
           v.scene.requestRender();
         }),
       );
+      void loadMarkers(true);
       const first = v.scene.postRender.addEventListener(() => {
         setRenderedWidth(v.scene.canvas.clientWidth);
         setRenderState(
@@ -565,50 +693,36 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       neutralImagery.current = null;
       releaseImagery.current = null;
       terrain.current = null;
+      renderSignatures.clear();
     };
   }, [props.config, props.forceFallback, retry]);
   useEffect(() => {
-    if (!props.placesReadiness || !telemetry.current) return;
+    if (
+      !props.placesReadiness ||
+      !telemetry.current ||
+      (props.loadPublicMarkers && !failed)
+    )
+      return;
     telemetry.current.layers.places = props.placesReadiness;
     setLayerReadiness({ ...telemetry.current.layers });
     callbacks.current.onDiagnostics?.({ ...telemetry.current });
-  }, [props.placesReadiness]);
+  }, [failed, props.loadPublicMarkers, props.placesReadiness]);
   useEffect(() => {
     const v = viewer.current,
       ds = placeLayer.current;
     if (!ready || !v || !ds || v.isDestroyed()) return;
     const layerStart = performance.now();
-    ds.entities.removeAll();
-    for (const p of props.points ?? []) {
-      const selected = p.id === props.selectedId;
-      ds.entities.add({
-        id: p.id,
-        name: p.name,
-        position: Cesium.Cartesian3.fromDegrees(
-          p.location.longitude,
-          p.location.latitude,
-        ),
-        point: {
-          pixelSize: selected ? 18 : 11,
-          color: Cesium.Color.fromCssColorString(
-            p.state === "INVALID" ? "#f77777" : selected ? "#ffe3a0" : p.color,
-          ),
-          outlineColor: Cesium.Color.BLACK,
-          outlineWidth: 2,
-          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          disableDepthTestDistance: Infinity,
-        },
-        label: {
-          text: selected ? p.name : "",
-          font: "14px sans-serif",
-          pixelOffset: new Cesium.Cartesian2(0, -26),
-          fillColor: Cesium.Color.WHITE,
-          showBackground: true,
-          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-          disableDepthTestDistance: Infinity,
-        },
-      });
-    }
+    syncPlaceEntities(
+      ds,
+      displayPoints,
+      props.selectedId,
+      placeRenderSignatures.current,
+    );
+    // Cesium can finish creating clamped marker primitives after collection
+    // reconciliation; re-enable clustering so that batch is decluttered.
+    ds.clustering.enabled = false;
+    ds.clustering.enabled = true;
+    setMarkerEntityCount(ds.entities.values.length);
     v.scene.requestRender();
     if (telemetry.current) {
       telemetry.current.placeLayerMs = Math.round(
@@ -616,12 +730,14 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       );
       callbacks.current.onDiagnostics?.({ ...telemetry.current });
     }
-  }, [ready, generation, props.points, props.selectedId]);
+  }, [displayPoints, ready, generation, props.selectedId]);
   useEffect(() => {
     const v = viewer.current;
     if (!ready || !v || v.isDestroyed()) return;
     if (callbacks.current.picker && !props.focusRequest) return;
-    const p = callbacks.current.points?.find((p) => p.id === props.selectedId);
+    const p = callbacks.current.points?.find(
+      (point) => point.id === props.selectedId,
+    );
     const entity = p && placeLayer.current?.entities.getById(p.id);
     let cancelled = false;
     if (p && entity) {
@@ -653,7 +769,7 @@ export default function ViewerEngine(props: SpatialViewerProps) {
       cancelled = true;
       if (!v.isDestroyed()) v.camera.cancelFlight();
     };
-  }, [ready, generation, props.selectedId, props.focusRequest]);
+  }, [displayPoints, ready, generation, props.selectedId, props.focusRequest]);
   useEffect(() => {
     const v = viewer.current;
     if (!ready || !v || v.isDestroyed()) return;
@@ -755,6 +871,13 @@ export default function ViewerEngine(props: SpatialViewerProps) {
         data-imagery-status={layerReadiness.imagery}
         data-roads-status={layerReadiness.roads}
         data-places-status={layerReadiness.places}
+        data-marker-count={markerState.count}
+        data-marker-entity-count={markerEntityCount}
+        data-marker-request-count={markerState.requestCount}
+        data-marker-truncated={markerState.truncated ? "true" : "false"}
+        data-marker-clustering={ready ? "true" : "false"}
+        data-cluster-pixel-range={ready ? PLACE_CLUSTER_PIXEL_RANGE : 0}
+        data-cluster-minimum-size={ready ? PLACE_CLUSTER_MINIMUM_SIZE : 0}
         data-rendered-width={renderedWidth}
         data-render-state={renderState}
       >
@@ -865,6 +988,19 @@ export default function ViewerEngine(props: SpatialViewerProps) {
                           {layer.label}
                           <small>
                             {readinessLabels[layerReadiness[layer.id]]}
+                            {layer.id === "places" &&
+                              props.loadPublicMarkers && (
+                                <>
+                                  {markerState.status === "READY" &&
+                                    ` · ${markerState.count} marker đã tải${
+                                      markerState.truncated
+                                        ? ` · giới hạn ${PLACE_MARKER_VIEWPORT_LIMIT}`
+                                        : ""
+                                    }`}
+                                  {markerState.status === "FAILED" &&
+                                    " · không tải được marker"}
+                                </>
+                              )}
                           </small>
                         </span>
                       </label>
@@ -878,6 +1014,15 @@ export default function ViewerEngine(props: SpatialViewerProps) {
                       {notice}
                     </p>
                   )}
+                  {props.loadPublicMarkers &&
+                    markerState.status === "FAILED" && (
+                      <button
+                        type="button"
+                        onClick={() => markerReload.current?.()}
+                      >
+                        Thử tải lại địa điểm
+                      </button>
+                    )}
                 </div>
               </details>
               <button
@@ -924,6 +1069,23 @@ export default function ViewerEngine(props: SpatialViewerProps) {
           </>
         )}
       </div>
+      {props.loadPublicMarkers && markerState.status !== "IDLE" && (
+        <p
+          className="sr-only"
+          role={markerState.status === "FAILED" ? "alert" : "status"}
+          aria-live="polite"
+        >
+          {markerState.status === "LOADING"
+            ? "Đang tải marker địa điểm trong khung nhìn."
+            : markerState.status === "FAILED"
+              ? "Không tải được marker địa điểm. Các lớp bản đồ khác vẫn khả dụng."
+              : `${markerState.count} marker địa điểm đã tải trong khung nhìn${
+                  markerState.truncated
+                    ? `; kết quả bị giới hạn ở ${PLACE_MARKER_VIEWPORT_LIMIT} marker`
+                    : ""
+                }.`}
+        </p>
+      )}
       <ul
         className="sr-only"
         aria-label="Trạng thái sẵn sàng của lớp bản đồ"

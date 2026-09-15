@@ -16,4 +16,5 @@ export interface SpatialViewerProps {
   focusRequest?: number;
   forceFallback?: boolean;
   placesReadiness?: LayerReadiness;
+  loadPublicMarkers?: boolean;
 }

@@ -81,17 +81,17 @@ function Explorer({ config, categories, initialSlug }: Props) {
     return () => window.removeEventListener("popstate", restore);
   }, []);
   const points = useMemo<ViewerPoint[]>(() => {
-    const items = [...(list.data?.items ?? [])];
-    if (detail.data && !items.some((p) => p.id === detail.data.id))
-      items.push(detail.data);
-    return items.map((p) => ({
-      id: p.id,
-      name: p.name,
-      location: p.location,
-      color: p.categories[0]!.color,
-      state: "CURRENT",
-    }));
-  }, [list.data, detail.data]);
+    if (!detail.data) return [];
+    return [
+      {
+        id: detail.data.id,
+        name: detail.data.name,
+        location: detail.data.location,
+        color: detail.data.categories[0]!.color,
+        state: "CURRENT",
+      },
+    ];
+  }, [detail.data]);
   const placesReadiness: LayerReadiness = list.isError
     ? "FAILED"
     : list.isPending
@@ -120,6 +120,7 @@ function Explorer({ config, categories, initialSlug }: Props) {
         <SpatialViewer
           config={config}
           points={points}
+          loadPublicMarkers
           selectedId={detail.data?.id ?? null}
           placesReadiness={placesReadiness}
           onSelect={(id) => {

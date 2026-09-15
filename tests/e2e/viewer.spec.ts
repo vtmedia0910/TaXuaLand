@@ -22,6 +22,9 @@ test("Cesium shell, layer controls, camera reset and mobile viewport", async ({
   await expect(viewer).toHaveAttribute("data-imagery-status", "UNAVAILABLE");
   await expect(viewer).toHaveAttribute("data-roads-status", "UNAVAILABLE");
   await expect(viewer).toHaveAttribute("data-places-status", "READY");
+  await expect(viewer).toHaveAttribute("data-marker-count", "0");
+  await expect(viewer).toHaveAttribute("data-marker-entity-count", "0");
+  await expect(viewer).toHaveAttribute("data-marker-request-count", "1");
   const expectRegionalCamera = async () => {
     const values = (await viewer.getAttribute("data-camera-frame"))
       ?.split(",")
@@ -127,6 +130,123 @@ test("Cesium shell, layer controls, camera reset and mobile viewport", async ({
   await page.screenshot({ path: "work/qa-viewer-mobile.png" });
   expect(errors).toEqual([]);
 });
+
+test("viewport Place markers page to the ceiling and preserve responsive composition", async ({
+  page,
+}) => {
+  let total = 501;
+  await page.route("**/api/public/places/markers?**", async (route) => {
+    const url = new URL(route.request().url());
+    const offset = Number(url.searchParams.get("offset"));
+    const limit = Number(url.searchParams.get("limit"));
+    const items = Array.from(
+      { length: Math.max(0, Math.min(limit, total - offset)) },
+      (_, index) => {
+        const value = offset + index;
+        return {
+          id: `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`,
+          slug: `viewport-${value}`,
+          name: `Viewport fixture ${value}`,
+          position: { longitude: 104.535, latitude: 21.3 },
+          presentationCategory: {
+            id: "10000000-0000-4000-8000-000000000000",
+            code: "FIXTURE",
+            name: "Synthetic fixture",
+            color: "#0ea5ab",
+          },
+        };
+      },
+    );
+    const nextOffset =
+      offset + items.length < total ? offset + items.length : null;
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        items,
+        bbox: { west: 104.45, south: 21.2, east: 104.62, north: 21.35 },
+        clamped: false,
+        truncated: nextOffset !== null,
+        nextOffset,
+      }),
+    });
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/map");
+  const viewer = page.getByTestId("spatial-viewer");
+  await expect(viewer).toHaveAttribute("data-places-status", "READY", {
+    timeout: 60000,
+  });
+  await expect(viewer).toHaveAttribute("data-marker-count", "500");
+  await expect(viewer).toHaveAttribute("data-marker-entity-count", "500");
+  await expect(viewer).toHaveAttribute("data-marker-request-count", "5");
+  await expect(viewer).toHaveAttribute("data-marker-truncated", "true");
+  await expect(viewer).toHaveAttribute("data-marker-clustering", "true");
+  await expect(viewer).toHaveAttribute("data-cluster-pixel-range", "50");
+  await expect(viewer).toHaveAttribute("data-cluster-minimum-size", "15");
+  await page.getByRole("button", { name: "Mở lớp bản đồ" }).click();
+  await expect(page.getByText(/500 marker đã tải.*giới hạn 500/)).toBeVisible();
+  await page.screenshot({ path: "work/qa-place-cluster-desktop.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+    .toBe(390);
+  await expect(viewer).toHaveAttribute("data-marker-count", "500");
+  await page.screenshot({ path: "work/qa-place-cluster-mobile.png" });
+  total = 14;
+  await page.reload();
+  await expect(viewer).toHaveAttribute("data-places-status", "READY", {
+    timeout: 60000,
+  });
+  await expect(viewer).toHaveAttribute("data-marker-count", "14");
+  await expect(viewer).toHaveAttribute("data-marker-entity-count", "14");
+  await expect(viewer).toHaveAttribute("data-marker-request-count", "1");
+  await expect(viewer).toHaveAttribute("data-marker-truncated", "false");
+});
+
+test("Places API failure is isolated from the Cesium canvas and other layers", async ({
+  page,
+}) => {
+  let requests = 0;
+  await page.route("**/api/public/places/markers?**", (route) => {
+    requests++;
+    return requests === 1
+      ? route.fulfill({ status: 503, body: "unavailable" })
+      : route.fulfill({
+          contentType: "application/json",
+          body: JSON.stringify({
+            items: [],
+            bbox: { west: 104.45, south: 21.2, east: 104.62, north: 21.35 },
+            clamped: false,
+            truncated: false,
+            nextOffset: null,
+          }),
+        });
+  });
+  await page.goto("/map");
+  const viewer = page.getByTestId("spatial-viewer");
+  await expect(viewer).toHaveAttribute("data-cesium-state", "READY", {
+    timeout: 60000,
+  });
+  await expect(viewer).toHaveAttribute("data-places-status", "FAILED");
+  await expect(viewer).toHaveAttribute("data-terrain-status", "UNAVAILABLE");
+  await expect(viewer).toHaveAttribute("data-imagery-status", "UNAVAILABLE");
+  await expect(viewer).toHaveAttribute("data-roads-status", "UNAVAILABLE");
+  await expect(page.locator(".cesium-host canvas")).toBeVisible();
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "Không tải được marker địa điểm" }),
+  ).toBeAttached();
+  await page.getByRole("button", { name: "Mở lớp bản đồ" }).click();
+  await expect(page.locator(".map-layer-control")).toHaveAttribute("open", "");
+  const retry = page.getByRole("button", { name: "Thử tải lại địa điểm" });
+  await expect(retry).toBeVisible();
+  await retry.click({ noWaitAfter: true });
+  await expect.poll(() => requests).toBe(2);
+  await expect(viewer).toHaveAttribute("data-places-status", "READY");
+  await expect(viewer).toHaveAttribute("data-marker-count", "0");
+  expect(requests).toBe(2);
+});
 test("WebGL unavailable yields a usable fallback", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.addInitScript(() => {
@@ -152,6 +272,7 @@ test("WebGL unavailable yields a usable fallback", async ({ page }) => {
     "data-places-status",
     "READY",
   );
+  await expect(page.getByText(/0 marker địa điểm đã tải/)).toHaveCount(0);
   const retry = page.getByRole("button", { name: "Thử lại bản đồ 3D" });
   await expect(retry).toBeVisible();
   await retry.focus();

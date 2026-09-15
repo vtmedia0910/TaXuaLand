@@ -33,7 +33,7 @@ The approved Phase 1 specification is merged through PR #4. Slice 1A is complete
 
 Slice 1C is complete. Its code merged into `main` through PR #11, "Phase 1 Slice 1C: governed imagery and roads", at merge commit `e72d8e7613c0cca5cd5a71e18c44d19d9d02e7bc`, with all required GitHub CI and Vercel checks passing. Subsequent production acceptance passed for governed roads and imagery delivery, desktop/mobile browser behavior, responsive behavior, and semantic honesty. Verification and accuracy remain `UNKNOWN`.
 
-Slice 1D-A is code ready on branch `feat/phase-1d-a-place-marker-contract` at implementation commit `b393d81b0391752f76485994369ef9297cdf4d4c`. Delivery succeeded through open, mergeable PR #14, "Phase 1 Slice 1D-A: public Place marker bbox contract"; required GitHub CI and Vercel checks pass. Slice 1D-A is not merged or production accepted. Slice 1D-B is not started.
+Slice 1D-A merged through PR #14 at merge commit `c42b22940f5cfe26fa0061adea9f46fa4da73a8d`. Slice 1D-B is complete in the local worktree: viewport-bounded progressive Place marker loading, stale-request cancellation, stable Cesium entity reconciliation, native clustering, independent Places failure/retry state, and accessible count/truncation status are implemented and locally verified. Git delivery is pending because this Codex environment cannot write `.git`.
 
 ### Local-state boundary
 
@@ -92,8 +92,8 @@ IMAGERY DELIVERY: 1 MANIFEST + 123 PNG TILES
 GOVERNED IMAGERY: READY
 NEUTRAL_GRID: DEGRADED/FAILURE FALLBACK ONLY
 SLICE 1C PRODUCTION ACCEPTANCE: FUNCTIONALLY PRESENT PASS / BROWSER VERIFIED PASS / RESPONSIVE PASS / SEMANTIC HONESTY PASS
-SLICE 1D-A: CODE READY / PR #14 OPEN / REQUIRED GITHUB CI + VERCEL PASS / NOT MERGED / PRODUCTION ACCEPTANCE NOT STARTED
-SLICE 1D-B: NOT STARTED
+SLICE 1D-A: COMPLETE / PR #14 MERGED AT C42B229
+SLICE 1D-B: LOCAL CODE READY / ISOLATED PNPM CHECK PASS / CORE E2E 14/14 PASS / MANUAL GIT DELIVERY REQUIRED
 SLICE 1D DATASET/CONTENT: NOT ENABLED
 UNRELATED PRODUCTION MUTATIONS: NONE
 ```
@@ -329,10 +329,11 @@ TX-DEM-2026-001 PUBLISHED; production terrain browser and visual validation PASS
 Slice 1C — COMPLETE
 Governed published roads and Sentinel-2 imagery, public contract, Cesium adapter, responsive production browser behavior and honest degraded-state fallback
 
-Slice 1D-A — CODE READY / PR #14 OPEN / REQUIRED GITHUB CI + VERCEL PASS
-Public-safe Place marker contract and strict AOI-bounded WGS84 bbox access only; no Cesium marker or clustering integration
+Slice 1D-A — COMPLETE / PR #14 MERGED AT `c42b22940f5cfe26fa0061adea9f46fa4da73a8d`
+Public-safe Place marker contract and strict AOI-bounded WGS84 bbox access
 
-Slice 1D-B — NOT STARTED
+Slice 1D-B — LOCAL CODE READY / MANUAL GIT DELIVERY REQUIRED
+Viewport-bounded progressive Place markers, bounded pagination/truncation, stale-request cancellation, stable Cesium entity reconciliation, native clustering, isolated failure/retry state, and accessible non-canvas status
 ```
 
 The owner approved road candidate `TX-ROADS-2026-001`, OpenStreetMap/ODbL attribution, and Sentinel Item `S2C_T48QVJ_20260527T033930_L2A` with full AOI containment, scene cloud `<= 20%`, AOI SCL obstruction `<= 10%`, and the approved modified-Copernicus public notice. Local candidate inspection passes with 208 road features and 123 imagery tiles; imagery scene cloud is `8.200835%` and AOI obstruction is `5.867461600149733%`. The missing private copied provenance files and EPSG:3857 derived raster were regenerated from the pinned local source bytes; the registrar accepts the complete local inventory before database access.
@@ -347,7 +348,9 @@ Governed Sentinel-2 imagery Release `TX-IMAGERY-S2L2A-20260527T034216Z-001` is `
 
 Slice 1C production acceptance is `PASS` for functionally present, browser verified, responsive, and semantic honesty. Production terrain `TX-DEM-2026-001` remains unchanged and `PUBLISHED`; its production browser validation remains `PASS`, while verification and accuracy remain `UNKNOWN`. No Slice 1D dataset or content was enabled, and no unrelated production mutations occurred.
 
-On 2026-09-15, Slice 1D-A reached code ready. The marker contract, route, centralized eligibility reuse, AOI-bounded parameterized PostGIS query, deterministic presentation-only category, explicit 100-item truncation/pagination, privacy projection, and architecture note are complete. The focused marker suite passed 5/5, including disposable-PostGIS eligibility, bbox, limit/truncation, and GiST plan checks. In an isolated `LOCAL` environment, the full `pnpm check` passed 181/181 tests; lint, TypeScript, production build, client/server artifact checks, secret scan, `git diff --check`, and all 12 Core E2E browser tests also passed. Branch creation, commit `b393d81b0391752f76485994369ef9297cdf4d4c`, push, and PR #14 delivery succeeded. PR #14 is open and mergeable with required GitHub CI and Vercel checks passing. It is not merged or production accepted. Production mutations remain NONE; no Place/category/source/provider/content was enabled; verification and accuracy remain `UNKNOWN`; Slice 1D-B is not started.
+On 2026-09-15, Slice 1D-A merged through PR #14 at `c42b22940f5cfe26fa0061adea9f46fa4da73a8d`. Its marker contract, route, centralized eligibility reuse, AOI-bounded parameterized PostGIS query, deterministic presentation-only category, explicit 100-item truncation/pagination, privacy projection, and architecture note are the Slice 1D-B baseline.
+
+Also on 2026-09-15, the resumed Slice 1D-B candidate reached local code ready. Focused marker tests pass 9/9 and cover empty, 100, multi-page, 500, over-cap truncation, AOI clamping, meaningful viewport movement, request cancellation/generation rejection, cluster non-selection, stable entity reuse/update/removal, and empty reconciliation. In an isolated `LOCAL` environment, full `pnpm check` passes 190/190 tests, lint, all TypeScript projects, production build, 68 client-chunk syntax checks, the 793-entry server artifact cold parse, and secret scan. Core E2E passes 14/14 against a fresh disposable PostGIS database and least-privileged production server, including sparse/dense marker fixtures, five requests for 500 rendered entities, explicit truncation, Places failure/retry isolation, imagery regression, public Place focus regression, WebGL fallback, and desktop/mobile layout. Browser frames were observed at 1440×900 and 390×844 with no horizontal overflow or material layout collision. Owner `.env.local` files were restored byte-for-byte; disposable databases, runtime roles, isolated profiles, Slice 1D-B copies/zips, and temporary runners were removed. Production mutations remain NONE. Production/provider behavior, field accuracy, and verification remain `UNKNOWN`. Git branch/commit/push/PR work is pending because `.git` is read-only in this environment.
 
 ---
 
@@ -490,7 +493,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-Perform final review of PR #14, then merge only if the review remains clean.
+Create `feat/phase-1d-b-place-markers-clustering`, stage only the seven intended Slice 1D-B files, commit, push, and open a PR against `main`; do not merge. Then wait for GitHub CI, Core E2E, and Vercel checks.
 
 ---
 
@@ -556,13 +559,13 @@ PHASE 0.5 PR
 #2 — MERGED
 
 CURRENT PHASE
-Phase 1 in progress — Slice 1A complete; Slice 1B complete; Slice 1C complete; Slice 1D-A code ready with PR #14 open; Slice 1D-B not started
+Phase 1 in progress — Slices 1A, 1B, 1C, and 1D-A complete; Slice 1D-B local code ready with manual Git delivery pending
 
 PRIMARY CURRENT GOAL
-Complete final review of PR #14, then merge only if the review remains clean
+Deliver the validated Slice 1D-B candidate through a focused branch and PR without merging
 
 PHASE 1
-IN PROGRESS / SLICE 1A COMPLETE / SLICE 1B COMPLETE / SLICE 1C COMPLETE / SLICE 1D-A CODE READY / PR #14 OPEN + MERGEABLE / REQUIRED GITHUB CI + VERCEL PASS / NOT MERGED / PRODUCTION ACCEPTANCE NOT STARTED / MARKER CONTRACT + AOI BBOX ONLY / TARGETED 5/5 PASS / FULL PNPM CHECK 181/181 PASS IN ISOLATED LOCAL ENVIRONMENT / CORE E2E 12/12 PASS / LINT + TYPECHECK + BUILD + CLIENT/SERVER ARTIFACT CHECKS + SECRET SCAN + GIT DIFF CHECK PASS / PRODUCTION MUTATIONS NONE / SLICE 1D-B NOT STARTED / VERIFICATION UNKNOWN / ACCURACY UNKNOWN
+IN PROGRESS / SLICE 1A COMPLETE / SLICE 1B COMPLETE / SLICE 1C COMPLETE / SLICE 1D-A COMPLETE + PR #14 MERGED / SLICE 1D-B LOCAL CODE READY / TARGETED MARKER 9/9 PASS / FULL PNPM CHECK 190/190 PASS IN ISOLATED LOCAL ENVIRONMENT / CORE E2E 14/14 PASS / LINT + TYPECHECK + BUILD + CLIENT/SERVER ARTIFACT CHECKS + SECRET SCAN PASS / DESKTOP + MOBILE BROWSER OBSERVED / PRODUCTION MUTATIONS NONE / PRODUCTION + PROVIDER VERIFICATION UNKNOWN / ACCURACY UNKNOWN / MANUAL GIT DELIVERY REQUIRED
 
 ARCHITECTURE
 FROZEN
@@ -574,5 +577,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-PERFORM FINAL REVIEW OF PR #14, THEN MERGE ONLY IF THE REVIEW REMAINS CLEAN.
+CREATE THE SLICE 1D-B FEATURE BRANCH, COMMIT ONLY THE SEVEN INTENDED FILES, PUSH, OPEN A PR AGAINST MAIN, AND WAIT FOR REQUIRED CHECKS. DO NOT MERGE.
 ```
