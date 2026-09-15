@@ -324,6 +324,9 @@ TX-DEM-2026-001 PUBLISHED; production terrain browser and visual validation PASS
 
 Slice 1C — COMPLETE
 Governed published roads and Sentinel-2 imagery, public contract, Cesium adapter, responsive production browser behavior and honest degraded-state fallback
+
+Slice 1D-A — LOCAL CANDIDATE COMPLETE / DELIVERY BLOCKED
+Public-safe Place marker contract and strict AOI-bounded WGS84 bbox access only; no Cesium marker or clustering integration
 ```
 
 The owner approved road candidate `TX-ROADS-2026-001`, OpenStreetMap/ODbL attribution, and Sentinel Item `S2C_T48QVJ_20260527T033930_L2A` with full AOI containment, scene cloud `<= 20%`, AOI SCL obstruction `<= 10%`, and the approved modified-Copernicus public notice. Local candidate inspection passes with 208 road features and 123 imagery tiles; imagery scene cloud is `8.200835%` and AOI obstruction is `5.867461600149733%`. The missing private copied provenance files and EPSG:3857 derived raster were regenerated from the pinned local source bytes; the registrar accepts the complete local inventory before database access.
@@ -337,6 +340,8 @@ Production acceptance is now complete for Slice 1C. Road Release `TX-ROADS-2026-
 Governed Sentinel-2 imagery Release `TX-IMAGERY-S2L2A-20260527T034216Z-001` is `PUBLISHED`. Production R2 delivery passed for one manifest and 123 PNG tiles, desktop/mobile browser validation passed, and governed imagery reaches `READY`. `NEUTRAL_GRID` remains degraded/failure fallback only. Imagery verification and accuracy remain `UNKNOWN`.
 
 Slice 1C production acceptance is `PASS` for functionally present, browser verified, responsive, and semantic honesty. Production terrain `TX-DEM-2026-001` remains unchanged and `PUBLISHED`; its production browser validation remains `PASS`, while verification and accuracy remain `UNKNOWN`. No Slice 1D dataset or content was enabled, and no unrelated production mutations occurred.
+
+On 2026-09-15, the interrupted Slice 1D-A worktree was resumed without discarding any candidate changes. The marker contract, route, centralized eligibility reuse, AOI-bounded parameterized PostGIS query, deterministic presentation-only category, explicit 100-item truncation/pagination, privacy projection, and architecture note are locally complete. The focused marker suite passed 5/5, including disposable-PostGIS eligibility, bbox, limit/truncation, and GiST plan checks. Repository and web TypeScript checks, focused ESLint, production build, client/server artifact checks, secret scan, `git diff --check`, and all 12 Core E2E browser tests passed; Core E2E removed its disposable database and runtime role. The exact `pnpm check` command reached the unit suite but did not pass: 171/181 tests passed and 10 existing environment-sensitive tests failed because the deployed `.env.local` settings override their expected LOCAL storage/asset assumptions. Slice 1D-A tests did not fail. Git branch creation, commit, push, and PR are blocked because this sandbox denies writes to `.git`. Production mutations remain NONE, and no Place/category/source/provider/content was enabled.
 
 ---
 
@@ -479,7 +484,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-Plan Slice 1D Places only after explicit owner authorization. Do not enable Slice 1D datasets or content before that authorization.
+Resume in a Git-writable shell with an isolated LOCAL test environment, rerun `pnpm check`, then branch, commit, push, and open the Slice 1D-A PR without merging it.
 
 ---
 
@@ -545,13 +550,13 @@ PHASE 0.5 PR
 #2 — MERGED
 
 CURRENT PHASE
-Phase 1 in progress — Slice 1A complete; Slice 1B complete; Slice 1C complete
+Phase 1 in progress — Slice 1A complete; Slice 1B complete; Slice 1C complete; Slice 1D-A local candidate complete with delivery blocked
 
 PRIMARY CURRENT GOAL
-Plan Slice 1D Places only after owner authorization
+Deliver the completed Slice 1D-A marker-contract candidate through a focused branch and PR after local check isolation
 
 PHASE 1
-IN PROGRESS / SLICE 1A COMPLETE / SLICE 1B COMPLETE / SLICE 1C COMPLETE / TERRAIN TX-DEM-2026-001 PUBLISHED AND PRODUCTION BROWSER PASS / ROADS TX-ROADS-2026-001 PUBLISHED, PRODUCTION R2 DELIVERY PASS, DESKTOP/MOBILE BROWSER PASS, MAPPED CONTEXT ONLY / IMAGERY TX-IMAGERY-S2L2A-20260527T034216Z-001 PUBLISHED, PRODUCTION R2 DELIVERY PASS, 1 MANIFEST + 123 PNG TILES, DESKTOP/MOBILE BROWSER PASS, READY / NEUTRAL_GRID DEGRADED/FAILURE FALLBACK ONLY / SLICE 1C FUNCTIONALLY PRESENT PASS / BROWSER VERIFIED PASS / RESPONSIVE PASS / SEMANTIC HONESTY PASS / PRODUCTION TERRAIN UNCHANGED / SLICE 1D DATASET/CONTENT NOT ENABLED / UNRELATED PRODUCTION MUTATIONS NONE / VERIFICATION UNKNOWN / ACCURACY UNKNOWN
+IN PROGRESS / SLICE 1A COMPLETE / SLICE 1B COMPLETE / SLICE 1C COMPLETE / SLICE 1D-A LOCAL CANDIDATE COMPLETE, DELIVERY BLOCKED / MARKER CONTRACT + AOI BBOX ONLY / TARGETED 5/5 PASS / CORE E2E 12/12 PASS / BUILD + TYPECHECK + SECRET SCAN PASS / FULL CHECK BLOCKED BY DEPLOYED ENV TEST CONTAMINATION / GIT METADATA READ-ONLY / PRODUCTION MUTATIONS NONE / SLICE 1D-B NOT STARTED / VERIFICATION UNKNOWN / ACCURACY UNKNOWN
 
 ARCHITECTURE
 FROZEN
@@ -563,5 +568,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-PLAN SLICE 1D PLACES ONLY AFTER OWNER AUTHORIZATION. DO NOT ENABLE SLICE 1D DATASETS OR CONTENT BEFORE THAT AUTHORIZATION.
+RESUME IN A GIT-WRITABLE SHELL WITH AN ISOLATED LOCAL TEST ENVIRONMENT, RERUN PNPM CHECK, THEN BRANCH, COMMIT, PUSH, AND OPEN THE SLICE 1D-A PR WITHOUT MERGING IT.
 ```

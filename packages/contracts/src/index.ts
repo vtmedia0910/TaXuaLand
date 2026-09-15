@@ -98,3 +98,50 @@ export const PublicPlaceList = z.object({
   items: z.array(PublicPlaceDTO),
   nextOffset: z.number().int().nonnegative().nullable(),
 });
+
+const BboxCoordinate = z.preprocess(
+  (value) =>
+    typeof value === "string" && value.trim() !== "" ? Number(value) : value,
+  z.number().finite(),
+);
+export const PublicPlaceMarkerQuery = z
+  .object({
+    west: BboxCoordinate.pipe(z.number().min(-180).max(180)),
+    south: BboxCoordinate.pipe(z.number().min(-90).max(90)),
+    east: BboxCoordinate.pipe(z.number().min(-180).max(180)),
+    north: BboxCoordinate.pipe(z.number().min(-90).max(90)),
+    limit: z.coerce.number().int().min(1).max(100).default(100),
+    offset: z.coerce.number().int().min(0).max(10000).default(0),
+  })
+  .strict()
+  .refine(({ west, east }) => west < east, "west must be less than east")
+  .refine(({ south, north }) => south < north, "south must be less than north");
+export const PublicBbox = z
+  .object({
+    west: z.number().finite().min(-180).max(180),
+    south: z.number().finite().min(-90).max(90),
+    east: z.number().finite().min(-180).max(180),
+    north: z.number().finite().min(-90).max(90),
+  })
+  .strict();
+export const PublicPlaceMarkerDTO = z
+  .object({
+    id: z.uuid(),
+    slug: Slug,
+    name: z.string(),
+    position: Wgs84Position,
+    /** Deterministic marker styling only; this is not a domain primary category. */
+    presentationCategory: PublicCategory,
+  })
+  .strict();
+export type PublicPlaceMarkerDTO = z.infer<typeof PublicPlaceMarkerDTO>;
+export const PublicPlaceMarkerPage = z
+  .object({
+    items: z.array(PublicPlaceMarkerDTO).max(100),
+    bbox: PublicBbox,
+    clamped: z.boolean(),
+    truncated: z.boolean(),
+    nextOffset: z.number().int().nonnegative().nullable(),
+  })
+  .strict();
+export type PublicPlaceMarkerPage = z.infer<typeof PublicPlaceMarkerPage>;

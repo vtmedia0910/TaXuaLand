@@ -88,6 +88,29 @@ test("public search selects real API marker and displays UNKNOWN without leaking
   const response = await page.request.get(`/api/public/places/${slug}`);
   expect(response.status()).toBe(200);
   expect(await response.text()).not.toContain("PRIVATE_FIXTURE");
+  const markerResponse = await page.request.get(
+    "/api/public/places/markers?west=104.53&south=21.24&east=104.54&north=21.25",
+  );
+  expect(markerResponse.status()).toBe(200);
+  const markerBody = await markerResponse.json();
+  const marker = markerBody.items.find(
+    ({ id }: { id: string }) => id === placeId,
+  );
+  expect(Object.keys(marker).sort()).toEqual([
+    "id",
+    "name",
+    "position",
+    "presentationCategory",
+    "slug",
+  ]);
+  expect(marker).toMatchObject({
+    id: placeId,
+    slug,
+    position: { longitude: 104.535, latitude: 21.245 },
+  });
+  expect(JSON.stringify(markerBody)).not.toMatch(
+    /PRIVATE_FIXTURE|source_record|provider|internal|audit|actor|evidence/,
+  );
   await page.screenshot({ path: "work/qa-public-desktop.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "work/qa-public-mobile.png", fullPage: true });

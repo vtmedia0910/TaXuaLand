@@ -1,6 +1,9 @@
 import { z } from "zod";
 import {
   PublicCategory,
+  PublicPlaceMarkerDTO,
+  PublicPlaceMarkerPage,
+  PublicPlaceMarkerQuery,
   PublicListQuery,
   PublicPlaceDTO,
   PublicPlaceDetailDTO,
@@ -35,6 +38,16 @@ const base = `jsonb_build_object('id',p.id,'name',p.name,'slug',p.slug,'shortDes
  'location',jsonb_build_object('longitude',ST_X(g.geometry),'latitude',ST_Y(g.geometry),'locationRole',g.location_role,'verificationStatus',${effective("g")},'horizontalAccuracyMeters',g.horizontal_accuracy_m,'trust',${trust("gs", "g", "g.observed_at")}),
  'mediaSummary',coalesce((SELECT jsonb_agg(dto) FROM (${media} LIMIT 1) preview),'[]'::jsonb),
  'trust',${trust("s")},'updatedAt',${iso("p.updated_at")})`;
+
+const markerAoi = z
+  .object({
+    west: z.number(),
+    south: z.number(),
+    east: z.number(),
+    north: z.number(),
+    outsidePolicy: z.enum(["WARNING", "INVALID"]),
+  })
+  .strict();
 
 export async function publicPlaces(input: unknown, connection = database()) {
   const q = PublicListQuery.parse(input);
@@ -72,6 +85,81 @@ export async function publicPlace(slug: string, connection = database()) {
   if (!row)
     throw new AppError("NOT_FOUND", 404, "Không tìm thấy địa điểm công khai.");
   return PublicPlaceDetailDTO.parse(row.dto);
+}
+
+export async function publicPlaceMarkers(
+  input: unknown,
+  connection = database(),
+) {
+  const q = PublicPlaceMarkerQuery.parse(input);
+  const aoiRow = (
+    await connection.query<{ aoi: unknown }>(
+      `SELECT jsonb_build_object(
+        'west',ST_XMin(ST_Envelope(boundary)),'south',ST_YMin(ST_Envelope(boundary)),
+        'east',ST_XMax(ST_Envelope(boundary)),'north',ST_YMax(ST_Envelope(boundary)),
+        'outsidePolicy',outside_policy) AS aoi
+       FROM areas_of_interest WHERE active`,
+    )
+  ).rows[0];
+  if (!aoiRow)
+    throw new AppError(
+      "AOI_NOT_CONFIGURED",
+      503,
+      "Chưa cấu hình vùng phủ LAND.",
+    );
+  const aoi = markerAoi.parse(aoiRow.aoi);
+  const outside =
+    q.west < aoi.west ||
+    q.south < aoi.south ||
+    q.east > aoi.east ||
+    q.north > aoi.north;
+  if (outside && aoi.outsidePolicy === "INVALID")
+    throw new AppError(
+      "BBOX_OUTSIDE_AOI",
+      400,
+      "Khung nhìn nằm ngoài vùng phủ LAND.",
+    );
+  const bbox = {
+    west: Math.max(q.west, aoi.west),
+    south: Math.max(q.south, aoi.south),
+    east: Math.min(q.east, aoi.east),
+    north: Math.min(q.north, aoi.north),
+  };
+  if (bbox.west >= bbox.east || bbox.south >= bbox.north)
+    throw new AppError(
+      "BBOX_OUTSIDE_AOI",
+      400,
+      "Khung nhìn nằm ngoài vùng phủ LAND.",
+    );
+
+  const rows = await connection.query<{ dto: unknown }>(
+    `SELECT jsonb_build_object(
+      'id',p.id,'slug',p.slug,'name',p.name,
+      'position',jsonb_build_object('longitude',ST_X(g.geometry),'latitude',ST_Y(g.geometry)),
+      'presentationCategory',presentation.category) AS dto
+     ${joins}
+     JOIN areas_of_interest aoi ON aoi.active AND ST_Covers(aoi.boundary,g.geometry)
+     JOIN LATERAL (
+       SELECT jsonb_build_object('id',c.id,'code',c.code,'name',c.name,'color',c.color) AS category
+       FROM place_category_links pc JOIN place_categories c ON c.id=pc.category_id
+       WHERE pc.place_id=p.id AND c.archived_at IS NULL
+       ORDER BY c.name,c.code,c.id LIMIT 1
+     ) presentation ON true
+     WHERE ${eligible}
+       AND g.geometry && ST_MakeEnvelope($1,$2,$3,$4,4326)
+     ORDER BY p.id LIMIT $5 OFFSET $6`,
+    [bbox.west, bbox.south, bbox.east, bbox.north, q.limit + 1, q.offset],
+  );
+  const truncated = rows.rows.length > q.limit;
+  return PublicPlaceMarkerPage.parse({
+    items: rows.rows
+      .slice(0, q.limit)
+      .map((row) => PublicPlaceMarkerDTO.parse(row.dto)),
+    bbox,
+    clamped: outside,
+    truncated,
+    nextOffset: truncated ? q.offset + q.limit : null,
+  });
 }
 export async function publicCategories(connection = database()) {
   const result = await connection.query(
