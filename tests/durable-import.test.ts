@@ -194,7 +194,7 @@ describe.skipIf(!connection)(
       expect(
         (await pool.query("SELECT count(*)::int AS n FROM land_migrations"))
           .rows[0].n,
-      ).toBe(14);
+      ).toBe(15);
       expect(await migrateLegacyInspections(pool, storage)).toEqual({
         migrated: 1,
       });

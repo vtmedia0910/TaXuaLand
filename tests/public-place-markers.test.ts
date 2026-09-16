@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { migrate } from "../infra/migrate";
-import { publicPlaceMarkers } from "../services/api/src/public-places";
+import {
+  publicPlace,
+  publicPlaceMarkers,
+  publicPlaces,
+} from "../services/api/src/public-places";
 
 const connection = process.env.DATABASE_TEST_URL;
 
@@ -80,13 +84,22 @@ describe.skipIf(!connection)(
         contentSourceArchived?: boolean;
         contentSourceStatus?: string;
         contentPublicDisplay?: "ALLOWED" | "DENIED" | "UNKNOWN";
+        contentSourceAcceptance?:
+          "OWNER_APPROVED" | "SOURCE_APPROVED" | "REJECTED" | null;
         contentProviderState?: "ENABLED" | "DISABLED" | "KILLED";
         geometry?: "CURRENT" | "HISTORICAL" | "MISSING";
         geometryRecordArchived?: boolean;
         geometrySourceArchived?: boolean;
         geometrySourceStatus?: string;
         geometryPublicDisplay?: "ALLOWED" | "DENIED" | "UNKNOWN";
+        geometrySourceAcceptance?:
+          "OWNER_APPROVED" | "SOURCE_APPROVED" | "REJECTED" | null;
+        geometryProviderRightsStatus?:
+          "ALLOWED" | "RESTRICTED" | "REVIEW_REQUIRED" | "UNKNOWN";
         geometryProviderState?: "ENABLED" | "DISABLED" | "KILLED";
+        locationRole?: "DECLARED" | "OBSERVED" | "VERIFIED";
+        verificationStatus?: "UNKNOWN" | "DECLARED";
+        horizontalAccuracyMeters?: number | null;
         category?: "ACTIVE" | "ARCHIVED" | "MISSING" | "MULTIPLE";
         longitude?: number;
         latitude?: number;
@@ -105,11 +118,12 @@ describe.skipIf(!connection)(
       };
       const contentSource = (
         await pool.query<{ id: string }>(
-          "INSERT INTO sources(name,category,status,public_display,provider_id,archived_at) VALUES($1,'PLACES',$2,$3,$4,$5) RETURNING id",
+          "INSERT INTO sources(name,category,status,public_display,source_acceptance,provider_id,archived_at) VALUES($1,'PLACES',$2,$3,$4,$5,$6) RETURNING id",
           [
             `${slug} content`,
             options.contentSourceStatus ?? "ACTIVE",
             options.contentPublicDisplay ?? "ALLOWED",
+            options.contentSourceAcceptance ?? null,
             await provider(options.contentProviderState),
             options.contentSourceArchived ? new Date() : null,
           ],
@@ -117,11 +131,13 @@ describe.skipIf(!connection)(
       ).rows[0]!.id;
       const geometrySource = (
         await pool.query<{ id: string }>(
-          "INSERT INTO sources(name,category,status,public_display,provider_id,archived_at) VALUES($1,'PLACES',$2,$3,$4,$5) RETURNING id",
+          "INSERT INTO sources(name,category,status,public_display,source_acceptance,provider_rights_status,provider_id,archived_at) VALUES($1,'PLACES',$2,$3,$4,$5,$6,$7) RETURNING id",
           [
             `${slug} geometry`,
             options.geometrySourceStatus ?? "ACTIVE",
             options.geometryPublicDisplay ?? "ALLOWED",
+            options.geometrySourceAcceptance ?? null,
+            options.geometryProviderRightsStatus ?? "UNKNOWN",
             await provider(options.geometryProviderState),
             options.geometrySourceArchived ? new Date() : null,
           ],
@@ -162,12 +178,15 @@ describe.skipIf(!connection)(
       ).rows[0]!.id;
       if ((options.geometry ?? "CURRENT") !== "MISSING")
         await pool.query(
-          "INSERT INTO place_geometries(place_id,geometry,source_record_id,source_crs,valid_from,valid_to) VALUES($1,ST_SetSRID(ST_MakePoint($2,$3),4326),$4,'EPSG:4326',$5,$6)",
+          "INSERT INTO place_geometries(place_id,geometry,source_record_id,source_crs,location_role,verification_status,horizontal_accuracy_m,valid_from,valid_to) VALUES($1,ST_SetSRID(ST_MakePoint($2,$3),4326),$4,'EPSG:4326',$5,$6,$7,$8,$9)",
           [
             placeId,
             options.longitude ?? 104.47,
             options.latitude ?? 21.22,
             geometryRecord,
+            options.locationRole ?? "DECLARED",
+            options.verificationStatus ?? "UNKNOWN",
+            options.horizontalAccuracyMeters ?? null,
             options.geometry === "HISTORICAL"
               ? new Date(Date.now() - 2_000)
               : new Date(),
@@ -320,7 +339,130 @@ describe.skipIf(!connection)(
         },
       });
       expect(JSON.stringify(result)).not.toMatch(
-        /PRIVATE_MARKER_FIXTURE|source_record|provider|internal|audit|actor|evidence|publicationStatus/,
+        /PRIVATE_MARKER_FIXTURE|source_record|sourceAcceptance|source_acceptance|providerRightsStatus|provider_rights_status|provider|internal|audit|actor|evidence|publicationStatus/,
+      );
+    });
+
+    it("allows only approved current geometry while keeping content and child rights strict", async () => {
+      const ownerReview = await addMarker("adr-owner-review", {
+        geometryPublicDisplay: "UNKNOWN",
+        geometrySourceAcceptance: "OWNER_APPROVED",
+        geometryProviderRightsStatus: "REVIEW_REQUIRED",
+        locationRole: "DECLARED",
+        verificationStatus: "UNKNOWN",
+        horizontalAccuracyMeters: null,
+      });
+      const ownerUnknown = await addMarker("adr-owner-unknown", {
+        geometryPublicDisplay: "UNKNOWN",
+        geometrySourceAcceptance: "OWNER_APPROVED",
+        geometryProviderRightsStatus: "UNKNOWN",
+      });
+      const sourceReview = await addMarker("adr-source-review", {
+        geometryPublicDisplay: "UNKNOWN",
+        geometrySourceAcceptance: "SOURCE_APPROVED",
+        geometryProviderRightsStatus: "REVIEW_REQUIRED",
+      });
+      const strict = await addMarker("adr-strict", {
+        geometryPublicDisplay: "ALLOWED",
+        geometrySourceAcceptance: null,
+      });
+      const rejected = await addMarker("adr-rejected", {
+        geometryPublicDisplay: "ALLOWED",
+        geometrySourceAcceptance: "REJECTED",
+      });
+      const restricted = await addMarker("adr-restricted", {
+        geometryPublicDisplay: "ALLOWED",
+        geometrySourceAcceptance: "OWNER_APPROVED",
+        geometryProviderRightsStatus: "RESTRICTED",
+      });
+      const unaccepted = await addMarker("adr-unaccepted", {
+        geometryPublicDisplay: "UNKNOWN",
+        geometrySourceAcceptance: null,
+      });
+      const outside = await addMarker("adr-outside", {
+        geometryPublicDisplay: "UNKNOWN",
+        geometrySourceAcceptance: "OWNER_APPROVED",
+        geometryProviderRightsStatus: "REVIEW_REQUIRED",
+        longitude: 104.63,
+      });
+      const contentBlocked = await addMarker("adr-content-blocked", {
+        contentPublicDisplay: "UNKNOWN",
+        contentSourceAcceptance: "OWNER_APPROVED",
+        geometryPublicDisplay: "UNKNOWN",
+        geometrySourceAcceptance: "OWNER_APPROVED",
+        geometryProviderRightsStatus: "REVIEW_REQUIRED",
+      });
+      await pool.query(
+        "UPDATE places SET description='PRIVATE_UNRESOLVED_DESCRIPTION' WHERE id=$1",
+        [contentBlocked],
+      );
+
+      const markers = await publicPlaceMarkers(
+        { west: 104.45, south: 21.2, east: 104.62, north: 21.35 },
+        pool,
+      );
+      const ids = new Set(markers.items.map(({ id }) => id));
+      for (const id of [ownerReview, ownerUnknown, sourceReview, strict])
+        expect(ids.has(id)).toBe(true);
+      for (const id of [
+        rejected,
+        restricted,
+        unaccepted,
+        outside,
+        contentBlocked,
+      ])
+        expect(ids.has(id)).toBe(false);
+
+      const detail = await publicPlace("adr-owner-review", pool);
+      expect(detail.location).toMatchObject({
+        locationRole: "DECLARED",
+        verificationStatus: "UNKNOWN",
+        horizontalAccuracyMeters: null,
+      });
+      expect(JSON.stringify(detail)).not.toMatch(
+        /sourceAcceptance|source_acceptance|providerRightsStatus|provider_rights_status/,
+      );
+      await expect(publicPlace("adr-content-blocked", pool)).rejects.toThrow(
+        "công khai",
+      );
+      expect(
+        (await publicPlaces({ query: "adr outside" }, pool)).items,
+      ).toHaveLength(0);
+
+      const unresolvedSource = (
+        await pool.query<{ id: string }>(
+          "INSERT INTO sources(name,category,status,public_display,source_acceptance) VALUES('ADR unresolved child content','PLACES','ACTIVE','UNKNOWN','OWNER_APPROVED') RETURNING id",
+        )
+      ).rows[0]!.id;
+      const unresolvedRecord = (
+        await pool.query<{ id: string }>(
+          "INSERT INTO source_records(source_id,raw_payload_hash) VALUES($1,repeat('d',64)) RETURNING id",
+          [unresolvedSource],
+        )
+      ).rows[0]!.id;
+      await pool.query(
+        "INSERT INTO place_access_contexts(place_id,access_method_text,road_condition_text,route_note,source_record_id) VALUES($1,'PRIVATE_ACCESS','PRIVATE_ROAD','PRIVATE_ROUTE',$2)",
+        [ownerReview, unresolvedRecord],
+      );
+      await pool.query(
+        "INSERT INTO place_safety_notes(place_id,note,source_record_id) VALUES($1,'PRIVATE_SAFETY',$2)",
+        [ownerReview, unresolvedRecord],
+      );
+      await pool.query(
+        "INSERT INTO place_media(place_id,media_type,source_url,alt_text,source_record_id) VALUES($1,'IMAGE','https://example.invalid/private.png','PRIVATE_MEDIA',$2)",
+        [ownerReview, unresolvedRecord],
+      );
+      await pool.query(
+        "INSERT INTO external_references(subject_id,provider,external_url,source_record_id) VALUES($1,'PRIVATE_PROVIDER','https://example.invalid/private',$2)",
+        [ownerReview, unresolvedRecord],
+      );
+      const bounded = await publicPlace("adr-owner-review", pool);
+      expect(bounded.accessContext).toBeNull();
+      expect(bounded.safetyNotes).toEqual([]);
+      expect(bounded.media).toEqual([]);
+      expect(bounded.externalReferences).toEqual([]);
+      expect(JSON.stringify(bounded)).not.toMatch(
+        /PRIVATE_ACCESS|PRIVATE_ROAD|PRIVATE_ROUTE|PRIVATE_SAFETY|PRIVATE_MEDIA|PRIVATE_PROVIDER/,
       );
     });
 

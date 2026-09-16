@@ -8,7 +8,7 @@ import { publishedBase } from "./published-assets";
 export async function listSources(actor: Actor) {
   requirePermission(actor, "read");
   const result = await database().query(
-    `SELECT id,name,provider_id AS "providerId",category,authority_level AS "authorityLevel",license_name AS "licenseName",license_reference AS "licenseReference",commercial_use AS "commercialUse",public_display AS "publicDisplay",caching,derivatives,redistribution,legal_reviewed_at AS "legalReviewedAt",source_crs AS "sourceCrs",freshness_class AS "freshnessClass",status,last_checked_at AS "lastCheckedAt" FROM sources WHERE archived_at IS NULL ORDER BY name`,
+    `SELECT id,name,provider_id AS "providerId",category,authority_level AS "authorityLevel",license_name AS "licenseName",license_reference AS "licenseReference",commercial_use AS "commercialUse",public_display AS "publicDisplay",caching,derivatives,redistribution,source_acceptance AS "sourceAcceptance",provider_rights_status AS "providerRightsStatus",legal_reviewed_at AS "legalReviewedAt",source_crs AS "sourceCrs",freshness_class AS "freshnessClass",status,last_checked_at AS "lastCheckedAt" FROM sources WHERE archived_at IS NULL ORDER BY name`,
   );
   return z.array(SourceSchema).parse(JSON.parse(JSON.stringify(result.rows)));
 }
@@ -17,7 +17,7 @@ export async function registerSource(actor: Actor, input: unknown) {
   const s = SourceSchema.parse(input);
   return transaction(async (client) => {
     await client.query(
-      `INSERT INTO sources(id,name,provider_id,category,authority_level,license_name,license_reference,commercial_use,public_display,caching,derivatives,redistribution,legal_reviewed_at,source_crs,freshness_class,status,last_checked_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+      `INSERT INTO sources(id,name,provider_id,category,authority_level,license_name,license_reference,commercial_use,public_display,caching,derivatives,redistribution,source_acceptance,provider_rights_status,legal_reviewed_at,source_crs,freshness_class,status,last_checked_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
       [
         s.id,
         s.name,
@@ -31,6 +31,8 @@ export async function registerSource(actor: Actor, input: unknown) {
         s.caching,
         s.derivatives,
         s.redistribution,
+        s.sourceAcceptance,
+        s.providerRightsStatus,
         s.legalReviewedAt,
         s.sourceCrs,
         s.freshnessClass,
@@ -41,6 +43,8 @@ export async function registerSource(actor: Actor, input: unknown) {
     await audit(client, actor, "SOURCE_REGISTERED", "SOURCE", s.id, {
       authority: s.authorityLevel,
       publicDisplay: s.publicDisplay,
+      sourceAcceptance: s.sourceAcceptance,
+      providerRightsStatus: s.providerRightsStatus,
     });
     return s;
   });

@@ -24,3 +24,36 @@ it("does not accept source registration without explicit license permissions", (
     }).success,
   ).toBe(false);
 });
+it("defaults unreviewed Source governance without fabricating approval", () => {
+  const source = SourceSchema.parse({
+    id: crypto.randomUUID(),
+    name: "Unreviewed source",
+    providerId: null,
+    category: "PLACES",
+    authorityLevel: "UNKNOWN",
+    licenseName: null,
+    licenseReference: null,
+    commercialUse: "UNKNOWN",
+    publicDisplay: "UNKNOWN",
+    caching: "UNKNOWN",
+    derivatives: "UNKNOWN",
+    redistribution: "UNKNOWN",
+    legalReviewedAt: null,
+    sourceCrs: "UNKNOWN",
+    freshnessClass: "UNKNOWN",
+    status: "REVIEW_REQUIRED",
+    lastCheckedAt: null,
+  });
+  expect(source.sourceAcceptance).toBeNull();
+  expect(source.providerRightsStatus).toBe("UNKNOWN");
+  expect(
+    SourceSchema.parse({
+      ...source,
+      sourceAcceptance: "OWNER_APPROVED",
+      providerRightsStatus: "REVIEW_REQUIRED",
+    }),
+  ).toMatchObject({
+    sourceAcceptance: "OWNER_APPROVED",
+    providerRightsStatus: "REVIEW_REQUIRED",
+  });
+});

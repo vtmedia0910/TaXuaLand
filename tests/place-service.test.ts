@@ -252,6 +252,64 @@ describe.skipIf(!connection)("place application service with PostGIS", () => {
       "DRAFT",
     );
   });
+  it("publishes owner-approved declared geometry without weakening content rights", async () => {
+    const publisher = {
+      ...actor,
+      permissions: new Set(["read", "edit", "publish"]),
+    };
+    await pool.query(
+      "UPDATE sources SET status='ACTIVE',public_display='ALLOWED' WHERE id=$1",
+      [sourceId],
+    );
+    const geometrySource = (
+      await pool.query<{ id: string }>(
+        "INSERT INTO sources(name,category,status,public_display,source_acceptance,provider_rights_status) VALUES('Owner-approved geometry','PLACES','ACTIVE','UNKNOWN','OWNER_APPROVED','REVIEW_REQUIRED') RETURNING id",
+      )
+    ).rows[0]!.id;
+    const geometryRecord = (
+      await pool.query<{ id: string }>(
+        "INSERT INTO source_records(source_id,raw_payload_hash) VALUES($1,repeat('e',64)) RETURNING id",
+        [geometrySource],
+      )
+    ).rows[0]!.id;
+    const data = PlaceInput.parse({
+      name: "ADR publication fixture",
+      slug: "adr-publication-fixture",
+      sourceId,
+      categoryIds: [categoryId],
+      location: { longitude: 104.53, latitude: 21.26 },
+      horizontalAccuracyMeters: null,
+    });
+    const id = await savePlace(actor, data, null, pool);
+    await pool.query(
+      "UPDATE place_geometries SET valid_to=clock_timestamp() WHERE place_id=$1 AND valid_to IS NULL",
+      [id],
+    );
+    await pool.query(
+      "INSERT INTO place_geometries(place_id,geometry,source_record_id,source_crs,location_role,verification_status,horizontal_accuracy_m) VALUES($1,ST_SetSRID(ST_MakePoint(104.53,21.26),4326),$2,'EPSG:4326','DECLARED','UNKNOWN',NULL)",
+      [id, geometryRecord],
+    );
+    await publishPlace(
+      publisher,
+      id,
+      {
+        version: 1,
+        reviewed: true,
+        warningsAcknowledged: false,
+        acknowledgedLocationStatus: "UNKNOWN",
+      },
+      pool,
+    );
+    expect((await publicPlace(data.slug, pool)).location).toMatchObject({
+      locationRole: "DECLARED",
+      verificationStatus: "UNKNOWN",
+      horizontalAccuracyMeters: null,
+    });
+    await pool.query(
+      "UPDATE places SET publication_status='ARCHIVED' WHERE id=$1",
+      [id],
+    );
+  });
   it("rejects edits by read-only actors", async () => {
     await expect(
       savePlace({ ...actor, permissions: new Set(["read"]) }, {}, null, pool),

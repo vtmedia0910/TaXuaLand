@@ -1,7 +1,9 @@
 import { z } from "zod";
 import {
   PermissionStatus,
+  ProviderRightsStatus,
   SafeUrl,
+  SourceAcceptance,
   SourceAuthority,
 } from "../../domain/src/index";
 export const SourceSchema = z
@@ -18,6 +20,8 @@ export const SourceSchema = z
     caching: PermissionStatus,
     derivatives: PermissionStatus,
     redistribution: PermissionStatus,
+    sourceAcceptance: SourceAcceptance.nullable().default(null),
+    providerRightsStatus: ProviderRightsStatus.default("UNKNOWN"),
     legalReviewedAt: z.iso.datetime().nullable(),
     sourceCrs: z.string().min(1),
     freshnessClass: z.enum([

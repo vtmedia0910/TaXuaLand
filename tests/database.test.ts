@@ -39,6 +39,37 @@ describe.skipIf(!connection)("real PostgreSQL/PostGIS integration", () => {
     );
     expect(result.rows[0].n).toBeGreaterThanOrEqual(2);
   });
+  it("adds independent Source acceptance and provider-rights states without backfill", async () => {
+    const source = (
+      await pool.query<{
+        id: string;
+        source_acceptance: string | null;
+        provider_rights_status: string;
+      }>(
+        "INSERT INTO sources(name,category) VALUES('ADR-010 defaults','PLACES') RETURNING id,source_acceptance,provider_rights_status",
+      )
+    ).rows[0]!;
+    expect(source).toMatchObject({
+      source_acceptance: null,
+      provider_rights_status: "UNKNOWN",
+    });
+    await pool.query(
+      "UPDATE sources SET source_acceptance='OWNER_APPROVED',provider_rights_status='REVIEW_REQUIRED' WHERE id=$1",
+      [source.id],
+    );
+    await expect(
+      pool.query(
+        "UPDATE sources SET source_acceptance='UNRECORDED' WHERE id=$1",
+        [source.id],
+      ),
+    ).rejects.toThrow();
+    await expect(
+      pool.query(
+        "UPDATE sources SET provider_rights_status='DENIED' WHERE id=$1",
+        [source.id],
+      ),
+    ).rejects.toThrow();
+  });
   it("stores and queries EPSG:4326 points and geodesic meters", async () => {
     const result = await pool.query(
       "SELECT ST_SRID(p) AS srid, ST_X(p) AS longitude, ST_Y(p) AS latitude, ST_Distance(p::geography,ST_SetSRID(ST_MakePoint(104.531,21.262),4326)::geography) AS meters FROM (SELECT ST_SetSRID(ST_MakePoint(104.53,21.262),4326) p) q",

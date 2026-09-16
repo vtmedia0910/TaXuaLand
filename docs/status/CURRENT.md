@@ -1,7 +1,7 @@
 # TÀ XÙA LAND — CURRENT STATUS
 
 Status: Mutable operational snapshot
-Last reconciled: 2026-09-15
+Last reconciled: 2026-09-16
 Repository: `vtmedia0910/TaXuaLand`
 Local workspace: `C:\Projects\TaXuaLand`
 
@@ -33,7 +33,11 @@ The approved Phase 1 specification is merged through PR #4. Slice 1A is complete
 
 Slice 1C is complete. Its code merged into `main` through PR #11, "Phase 1 Slice 1C: governed imagery and roads", at merge commit `e72d8e7613c0cca5cd5a71e18c44d19d9d02e7bc`, with all required GitHub CI and Vercel checks passing. Subsequent production acceptance passed for governed roads and imagery delivery, desktop/mobile browser behavior, responsive behavior, and semantic honesty. Verification and accuracy remain `UNKNOWN`.
 
-Slice 1D-A merged through PR #14 at merge commit `c42b22940f5cfe26fa0061adea9f46fa4da73a8d`. Slice 1D-B is complete in the local worktree: viewport-bounded progressive Place marker loading, stale-request cancellation, stable Cesium entity reconciliation, native clustering, independent Places failure/retry state, and accessible count/truncation status are implemented and locally verified. Git delivery is pending because this Codex environment cannot write `.git`.
+Slice 1D-A merged through PR #14 at merge commit `c42b22940f5cfe26fa0061adea9f46fa4da73a8d`. Slice 1D-B merged through PR #15 at merge commit `d8b5a5586728b513bf1bab5a41cc213fdb58eaca`.
+
+On 2026-09-16, owner Lương Anh Việt approved and authorized implementation of ADR-010, separating operational Source acceptance from provider-rights review and verification for Place geometry. Migration 015, domain/registry validation, the shared strict-versus-geometry Source predicate, Place publication/public list/detail/marker integration, DTO privacy checks, and focused regressions are locally implemented. Disposable loopback PostGIS migration tests and focused ADR-010 tests pass 36/36. The interrupted run recorded a full 196/196 pass; resumed full-suite attempts did not produce a new single-run green result because of one test-shell configuration error and one unrelated parallel PostGIS hook timeout, and both affected suites pass in isolation. Lint, all TypeScript projects, targeted formatting, and secret scan pass.
+
+The executable eleven-place disposable dry run passes: operational declared geometry `11/11`, verification `UNKNOWN` `11/11`, and accuracy `NULL` `11/11`; Cây Cô Đơn retains both provenance options and its OSM candidate is not selected. The current Next production build, static generation, and 68 client-chunk syntax checks pass. The server-artifact `IMPORT_TIMEOUT` is classified `PRE_EXISTING_ENVIRONMENTAL`, and the full-suite-only public-place E2E failure is classified `ENVIRONMENT_RESOURCE_CONTENTION`; ADR-010 is causal for neither, and the public-place journey passes 1/1 in isolation. ADR-010 acceptance is clean; neither unrelated blocker is in scope for this branch. Production mutations are `NONE`.
 
 ### Local-state boundary
 
@@ -93,8 +97,9 @@ GOVERNED IMAGERY: READY
 NEUTRAL_GRID: DEGRADED/FAILURE FALLBACK ONLY
 SLICE 1C PRODUCTION ACCEPTANCE: FUNCTIONALLY PRESENT PASS / BROWSER VERIFIED PASS / RESPONSIVE PASS / SEMANTIC HONESTY PASS
 SLICE 1D-A: COMPLETE / PR #14 MERGED AT C42B229
-SLICE 1D-B: LOCAL CODE READY / ISOLATED PNPM CHECK PASS / CORE E2E 14/14 PASS / MANUAL GIT DELIVERY REQUIRED
+SLICE 1D-B: COMPLETE / PR #15 MERGED AT D8B5A55
 SLICE 1D DATASET/CONTENT: NOT ENABLED
+OWNER-APPROVED DECLARED GEOMETRY: LOCALLY IMPLEMENTED / FOCUSED 36/36 PASS / DISPOSABLE 11/11 DRY RUN PASS / NEXT BUILD + 68 CHUNKS PASS / ADR-010 ACCEPTANCE CLEAN / IMPORT_TIMEOUT PRE-EXISTING + UNRELATED / FULL-SUITE E2E CONTENTION UNRELATED + FOCUSED 1/1 PASS / MANUAL GIT DELIVERY READY
 UNRELATED PRODUCTION MUTATIONS: NONE
 ```
 
@@ -332,7 +337,7 @@ Governed published roads and Sentinel-2 imagery, public contract, Cesium adapter
 Slice 1D-A — COMPLETE / PR #14 MERGED AT `c42b22940f5cfe26fa0061adea9f46fa4da73a8d`
 Public-safe Place marker contract and strict AOI-bounded WGS84 bbox access
 
-Slice 1D-B — LOCAL CODE READY / MANUAL GIT DELIVERY REQUIRED
+Slice 1D-B — COMPLETE / PR #15 MERGED AT `d8b5a5586728b513bf1bab5a41cc213fdb58eaca`
 Viewport-bounded progressive Place markers, bounded pagination/truncation, stale-request cancellation, stable Cesium entity reconciliation, native clustering, isolated failure/retry state, and accessible non-canvas status
 ```
 
@@ -350,7 +355,7 @@ Slice 1C production acceptance is `PASS` for functionally present, browser verif
 
 On 2026-09-15, Slice 1D-A merged through PR #14 at `c42b22940f5cfe26fa0061adea9f46fa4da73a8d`. Its marker contract, route, centralized eligibility reuse, AOI-bounded parameterized PostGIS query, deterministic presentation-only category, explicit 100-item truncation/pagination, privacy projection, and architecture note are the Slice 1D-B baseline.
 
-Also on 2026-09-15, the resumed Slice 1D-B candidate reached local code ready. Focused marker tests pass 9/9 and cover empty, 100, multi-page, 500, over-cap truncation, AOI clamping, meaningful viewport movement, request cancellation/generation rejection, cluster non-selection, stable entity reuse/update/removal, and empty reconciliation. In an isolated `LOCAL` environment, full `pnpm check` passes 190/190 tests, lint, all TypeScript projects, production build, 68 client-chunk syntax checks, the 793-entry server artifact cold parse, and secret scan. Core E2E passes 14/14 against a fresh disposable PostGIS database and least-privileged production server, including sparse/dense marker fixtures, five requests for 500 rendered entities, explicit truncation, Places failure/retry isolation, imagery regression, public Place focus regression, WebGL fallback, and desktop/mobile layout. Browser frames were observed at 1440×900 and 390×844 with no horizontal overflow or material layout collision. Owner `.env.local` files were restored byte-for-byte; disposable databases, runtime roles, isolated profiles, Slice 1D-B copies/zips, and temporary runners were removed. Production mutations remain NONE. Production/provider behavior, field accuracy, and verification remain `UNKNOWN`. Git branch/commit/push/PR work is pending because `.git` is read-only in this environment.
+Also on 2026-09-15, the resumed Slice 1D-B candidate reached local code ready. Focused marker tests pass 9/9 and cover empty, 100, multi-page, 500, over-cap truncation, AOI clamping, meaningful viewport movement, request cancellation/generation rejection, cluster non-selection, stable entity reuse/update/removal, and empty reconciliation. In an isolated `LOCAL` environment, full `pnpm check` passes 190/190 tests, lint, all TypeScript projects, production build, 68 client-chunk syntax checks, the 793-entry server artifact cold parse, and secret scan. Core E2E passes 14/14 against a fresh disposable PostGIS database and least-privileged production server, including sparse/dense marker fixtures, five requests for 500 rendered entities, explicit truncation, Places failure/retry isolation, imagery regression, public Place focus regression, WebGL fallback, and desktop/mobile layout. Browser frames were observed at 1440×900 and 390×844 with no horizontal overflow or material layout collision. Owner `.env.local` files were restored byte-for-byte; disposable databases, runtime roles, isolated profiles, Slice 1D-B copies/zips, and temporary runners were removed. Production mutations remain NONE. Production/provider behavior, field accuracy, and verification remain `UNKNOWN`. This validated candidate subsequently merged through PR #15 at `d8b5a5586728b513bf1bab5a41cc213fdb58eaca`.
 
 ---
 
@@ -493,7 +498,7 @@ Stage only intended paths.
 
 ## 15. Exact next action
 
-Create `feat/phase-1d-b-place-markers-clustering`, stage only the seven intended Slice 1D-B files, commit, push, and open a PR against `main`; do not merge. Then wait for GitHub CI, Core E2E, and Vercel checks.
+Manually stage only the reviewed ADR-010 paths, inspect the cached diff, and commit with `feat(places): support owner-approved declared geometry`. Do not stage `work/` or `Thư mục mới/`, fix either unrelated blocker on this branch, or apply migration 015 to Production.
 
 ---
 
@@ -559,13 +564,13 @@ PHASE 0.5 PR
 #2 — MERGED
 
 CURRENT PHASE
-Phase 1 in progress — Slices 1A, 1B, 1C, and 1D-A complete; Slice 1D-B local code ready with manual Git delivery pending
+Phase 1 in progress — Slices 1A, 1B, 1C, 1D-A, and 1D-B complete; ADR-010 locally implemented, accepted cleanly, and ready for manual Git delivery; two non-green checks are pre-existing/unrelated
 
 PRIMARY CURRENT GOAL
-Deliver the validated Slice 1D-B candidate through a focused branch and PR without merging
+Manually commit the reviewed ADR-010 change without Production mutation
 
 PHASE 1
-IN PROGRESS / SLICE 1A COMPLETE / SLICE 1B COMPLETE / SLICE 1C COMPLETE / SLICE 1D-A COMPLETE + PR #14 MERGED / SLICE 1D-B LOCAL CODE READY / TARGETED MARKER 9/9 PASS / FULL PNPM CHECK 190/190 PASS IN ISOLATED LOCAL ENVIRONMENT / CORE E2E 14/14 PASS / LINT + TYPECHECK + BUILD + CLIENT/SERVER ARTIFACT CHECKS + SECRET SCAN PASS / DESKTOP + MOBILE BROWSER OBSERVED / PRODUCTION MUTATIONS NONE / PRODUCTION + PROVIDER VERIFICATION UNKNOWN / ACCURACY UNKNOWN / MANUAL GIT DELIVERY REQUIRED
+IN PROGRESS / SLICE 1A COMPLETE / SLICE 1B COMPLETE / SLICE 1C COMPLETE / SLICE 1D-A COMPLETE + PR #14 MERGED / SLICE 1D-B COMPLETE + PR #15 MERGED / ADR-010 LOCALLY IMPLEMENTED + ACCEPTANCE CLEAN + MANUAL GIT DELIVERY READY / FOCUSED 36/36 PASS / EXECUTABLE 11/11 DRY RUN PASS / INTERRUPTED RUN FULL TEST 196/196 PASS / RESUME RUNS HAVE NO NEW SINGLE-RUN FULL GREEN / NEXT BUILD + 68 CHUNKS PASS / SERVER ARTIFACT IMPORT_TIMEOUT PRE-EXISTING + UNRELATED / CORE E2E 13/14 TWICE + FOCUSED FAILURE 1/1 PASS + CONTENTION UNRELATED / PRODUCTION MUTATIONS NONE / VERIFICATION UNKNOWN / ACCURACY UNKNOWN
 
 ARCHITECTURE
 FROZEN
@@ -577,5 +582,5 @@ PRIMARY 3D CLIENT
 CesiumJS
 
 NEXT
-CREATE THE SLICE 1D-B FEATURE BRANCH, COMMIT ONLY THE SEVEN INTENDED FILES, PUSH, OPEN A PR AGAINST MAIN, AND WAIT FOR REQUIRED CHECKS. DO NOT MERGE.
+MANUALLY STAGE ONLY THE REVIEWED ADR-010 PATHS, INSPECT THE CACHED DIFF, AND COMMIT. DO NOT STAGE `WORK/` OR `THƯ MỤC MỚI/`, FIX EITHER UNRELATED BLOCKER ON THIS BRANCH, OR APPLY MIGRATION 015 TO PRODUCTION.
 ```
