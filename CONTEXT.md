@@ -196,6 +196,10 @@ Geometry history must preserve the repository's append-only/history invariants.
 
 Source and provenance are first-class product data.
 
+Operational source acceptance, provider rights review, and verification are independent decisions. `OWNER_APPROVED` or `SOURCE_APPROVED` means LAND accepts source data for the approved operational scope; it does not change an external provider's terms, grant redistribution rights, or establish verification or accuracy. `REJECTED` source data is not operationally usable.
+
+`sources.source_acceptance` records that nullable operational decision. `sources.provider_rights_status` independently records `ALLOWED`, `RESTRICTED`, `REVIEW_REQUIRED`, or `UNKNOWN`; existing permission fields remain authoritative for their established content, Dataset/Release, export, redistribution, caching, and derivative scopes.
+
 Important spatial facts and layers should be traceable, where applicable, to source/provider, rights/license, timestamp, freshness, verification, CRS, accuracy/uncertainty, version, public/private classification, processing lineage, and release lineage.
 
 Source authority and verification are separate dimensions.

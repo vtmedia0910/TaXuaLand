@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { makeSlug, SafeUrl } from "../packages/domain/src/index";
+import {
+  makeSlug,
+  ProviderRightsStatus,
+  SafeUrl,
+  SourceAcceptance,
+} from "../packages/domain/src/index";
 import {
   AoiSchema,
   parseCoordinates,
@@ -56,6 +61,14 @@ describe("coordinate accuracy boundaries", () => {
     ).toMatchObject({ code: "OUTSIDE_AOI", severity: "INVALID" }));
 });
 describe("trust and publication", () => {
+  it("keeps Source acceptance and provider rights as distinct closed enums", () => {
+    expect(SourceAcceptance.parse("OWNER_APPROVED")).toBe("OWNER_APPROVED");
+    expect(ProviderRightsStatus.parse("REVIEW_REQUIRED")).toBe(
+      "REVIEW_REQUIRED",
+    );
+    expect(SourceAcceptance.safeParse("ACTIVE").success).toBe(false);
+    expect(ProviderRightsStatus.safeParse("DENIED").success).toBe(false);
+  });
   it("does not upgrade unknown on read", () =>
     expect(effectiveVerification(unknownVerification(), new Date())).toBe(
       "UNKNOWN",

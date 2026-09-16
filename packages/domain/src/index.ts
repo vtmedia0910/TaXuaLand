@@ -17,6 +17,17 @@ export const SourceAuthority = z.enum([
 ]);
 export const LocationRole = z.enum(["DECLARED", "OBSERVED", "VERIFIED"]);
 export const PermissionStatus = z.enum(["ALLOWED", "DENIED", "UNKNOWN"]);
+export const SourceAcceptance = z.enum([
+  "OWNER_APPROVED",
+  "SOURCE_APPROVED",
+  "REJECTED",
+]);
+export const ProviderRightsStatus = z.enum([
+  "ALLOWED",
+  "RESTRICTED",
+  "REVIEW_REQUIRED",
+  "UNKNOWN",
+]);
 export const ImportStatus = z.enum([
   "UPLOADED",
   "VALIDATING",

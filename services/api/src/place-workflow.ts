@@ -11,6 +11,10 @@ import {
   publicationErrors,
   effectiveVerification,
 } from "../../../packages/verification/src/index";
+import {
+  geometrySourceAllowed,
+  strictSourceAllowed,
+} from "./source-eligibility";
 
 export const VerificationCommand = z
   .object({
@@ -171,10 +175,14 @@ async function publishInTransaction(
     client,
     g ? { longitude: g.longitude, latitude: g.latitude } : null,
   );
-  const sources = await client.query<{ allowed: boolean }>(
-    "SELECT s.public_display='ALLOWED' AND s.status='ACTIVE' AND s.archived_at IS NULL AND sr.archived_at IS NULL AS allowed FROM source_records sr JOIN sources s ON s.id=sr.source_id WHERE sr.id=ANY($1::uuid[])",
-    [[p.source_record_id, g?.source_record_id].filter(Boolean)],
-  );
+  const sources = (
+    await client.query<{ content_allowed: boolean; geometry_allowed: boolean }>(
+      `SELECT
+        EXISTS(SELECT 1 FROM source_records sr JOIN sources s ON s.id=sr.source_id WHERE sr.id=$1 AND ${strictSourceAllowed("s", "sr")}) AS content_allowed,
+        EXISTS(SELECT 1 FROM source_records gr JOIN sources gs ON gs.id=gr.source_id WHERE gr.id=$2 AND ${geometrySourceAllowed("gs", "gr")}) AS geometry_allowed`,
+      [p.source_record_id, g?.source_record_id ?? null],
+    )
+  ).rows[0]!;
   const count = (
     await client.query<{ count: number }>(
       "SELECT count(*)::int AS count FROM place_category_links pc JOIN place_categories c ON c.id=pc.category_id WHERE pc.place_id=$1 AND c.archived_at IS NULL",
@@ -201,8 +209,7 @@ async function publishInTransaction(
     hasGeometry: !!g,
     categoryCount: count,
     sourceRecordId: p.source_record_id,
-    sourceDisplayAllowed:
-      sources.rows.length > 0 && sources.rows.every((s) => s.allowed),
+    sourceDisplayAllowed: sources.content_allowed && sources.geometry_allowed,
     blockingErrors: validation.filter((w) => w.severity === "INVALID").length,
     verificationStatus: status,
     reviewed: command.reviewed,
